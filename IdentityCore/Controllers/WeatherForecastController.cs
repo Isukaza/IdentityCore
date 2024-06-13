@@ -1,5 +1,5 @@
 using Helpers;
-using IdentityCore.Models;
+using IdentityCore.Models.Response;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IdentityCore.Controllers;
@@ -7,24 +7,17 @@ namespace IdentityCore.Controllers;
 //[Authorize]
 [ApiController]
 [Route("api/[controller]")]
-public class WeatherForecastController : ControllerBase
+public class WeatherForecastController() : ControllerBase
 {
     private static readonly string[] Summaries =
     [
         "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
     ];
 
-    private readonly ILogger<WeatherForecastController> _logger;
-
-    public WeatherForecastController(ILogger<WeatherForecastController> logger)
-    {
-        _logger = logger;
-    }
-    
     [HttpGet(Name = "GetWeatherForecast")]
     public async Task<IActionResult> Get()
     {
-        var weatherForecast = Enumerable.Range(1, 5).Select(index => new WeatherForecast
+        var weatherForecast = Enumerable.Range(1, 5).Select(index => new WeatherForecastResponse
             {
                 Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
                 TemperatureC = Random.Shared.Next(-20, 55),
@@ -32,6 +25,6 @@ public class WeatherForecastController : ControllerBase
             })
             .ToArray();
         
-        return await StatusCodes.Status200OK.ResultStateAsync(HttpContext, _logger, "Curren weather forecast", weatherForecast);
+        return await StatusCodes.Status200OK.ResultState("Curren weather forecast", weatherForecast);
     }
 }
