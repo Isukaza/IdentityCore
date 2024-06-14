@@ -12,6 +12,7 @@ public class UserController : Controller
     #if DEBUG
     
     [HttpGet("salt/{size:int}")]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
     public async Task<IActionResult> GenSalt(int size)
     {
         if (size < 16 || size > 64)
@@ -24,6 +25,7 @@ public class UserController : Controller
     }
     
     [HttpGet("password/{size:int}")]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
     public async Task<IActionResult> GenPassword(int size)
     {
         if (size < 12 || size > 64)
@@ -36,6 +38,7 @@ public class UserController : Controller
     }
     
     [HttpGet("password-hash")]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPasswordHash(string password, string salt)
     {
         if (password.Length < 12 || password.Length > 64)
@@ -52,6 +55,7 @@ public class UserController : Controller
     }
     
     [HttpGet("gen-users")]
+    [ProducesResponseType(typeof(List<TestUserResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPasswordHash(int count)
     {
         if (count < 1 || count > 1000)
