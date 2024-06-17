@@ -38,7 +38,7 @@ public class UserRepository : DbRepositoryBase<User>
         await using var transaction = await DbContext.Database.BeginTransactionAsync();
         try
         {
-            await DbContext.AddRangeAsync(users);
+            await DbContext.Users.AddRangeAsync(users);
             var result = await SaveAsync();
         
             await transaction.CommitAsync();
