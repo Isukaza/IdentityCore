@@ -1,8 +1,6 @@
-using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 
 using Helpers;
-using IdentityCore.DAL.Models;
 using IdentityCore.DAL.Repository;
 using IdentityCore.Managers;
 using IdentityCore.Models;
@@ -11,80 +9,70 @@ using IdentityCore.Models.Response;
 
 namespace IdentityCore.Controllers;
 
+[ApiController]
+[Route("/[controller]")]
 public class UserController : Controller
 {
-    private UserRepository UserRepo => HttpContext.RequestServices.GetService<UserRepository>();
-    private UserManager UserManager => HttpContext.RequestServices.GetService<UserManager>();
+    #region C-tor and fields
 
+    private readonly UserRepository _userRepo;
+    private readonly UserManager _userManager;
+
+    public UserController(UserRepository userRepository, UserManager userManager)
+    {
+        _userRepo = userRepository;
+        _userManager = userManager;
+    }
+
+    #endregion
+
+    #region GET
+    
     [HttpGet("{useId:guid}")]
     [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetUser(Guid useId)
     {
         if (useId == Guid.Empty)
             return await StatusCodes.Status400BadRequest.ResultState("Incorrect guid");
-        
-        var user = await UserRepo.GetUserByIdAsync(useId);
-        
+
+        var user = await _userRepo.GetUserByIdAsync(useId);
+
         return user != null
             ? await StatusCodes.Status200OK.ResultState("User info", user.ToUserResponse())
             : await StatusCodes.Status404NotFound.ResultState($"User by id:{useId} not found");
     }
 
+    #endregion
+
+    #region CRUD
+
     [HttpPut("create")]
     [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
-    public async Task<IActionResult> CreateUser([FromBody] UserRequest userRequest)
+    public async Task<IActionResult> CreateUser([FromBody] UserCreateRequest userCreateRequest)
     {
-        if (userRequest is null)
-            return await StatusCodes.Status400BadRequest.ResultState("Empty request or incorrect json");
-        
-        if (userRequest.Id != Guid.Empty)
-            return await StatusCodes.Status400BadRequest.ResultState("Incorrect ID");
-
-        if (!ModelState.IsValid)
-            return BadRequest(ModelState);
-
-        var userResponse = await UserManager.CreateUser(userRequest);
-
+        var userResponse = await _userManager.CreateUser(userCreateRequest);
         return await StatusCodes.Status201Created.ResultState("User created", userResponse.Id);
     }
 
     [HttpPut("update")]
-    [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
-    public async Task<IActionResult> UpdateUser([FromBody] UserRequest userRequest)
+    [ProducesResponseType(typeof(UserResponse), StatusCodes.Status201Created)]
+    public async Task<IActionResult> UpdateUser([FromBody] UserUpdateRequest updateRequest)
     {
         #region Validation
-        
-        if (userRequest is null)
-            return await StatusCodes.Status400BadRequest.ResultState("Empty request or incorrect json");
 
-        if (userRequest.Id == Guid.Empty)
-            return await StatusCodes.Status400BadRequest.ResultState("Incorrect ID");
+        if (string.IsNullOrEmpty(updateRequest.Username)
+            && string.IsNullOrEmpty(updateRequest.Email)
+            && string.IsNullOrEmpty(updateRequest.Password))
+            return await StatusCodes.Status400BadRequest.ResultState("At least one field must be specified");
 
-        var user = await UserRepo.GetUserByIdAsync(userRequest.Id);
+        var user = await _userRepo.GetUserByIdAsync(updateRequest.Id);
         if (user is null)
             return await StatusCodes.Status404NotFound.ResultState("User not found");
 
-        if (!ModelState.IsValid)
-        {
-            var hasAtLeastOneValidProperty = typeof(UserRequest)
-                .GetProperties()
-                .Any(prop =>
-                {
-                    var value = prop.GetValue(userRequest);
-                    var validationContext = new ValidationContext(userRequest) { MemberName = prop.Name };
-                    return prop.Name != "Id"
-                           && value != null
-                           && Validator.TryValidateProperty(value, validationContext, null);
-                });
-
-            if (!hasAtLeastOneValidProperty)
-                return await StatusCodes.Status400BadRequest
-                    .ResultState("At least one property must be specified correctly");
-        }
         #endregion
-        
-        var result = await UserManager.UpdateUser(userRequest, user);
-        
+
+        var result = await _userManager.UpdateUser(updateRequest, user);
+
         if (result.Success)
             return await StatusCodes.Status200OK.ResultState("User updated", result.Data.ToUserResponse());
 
@@ -97,15 +85,17 @@ public class UserController : Controller
     {
         if (userId == Guid.Empty)
             return await StatusCodes.Status400BadRequest.ResultState("Incorrect ID");
-        
-        var user = await UserRepo.GetUserByIdAsync(userId);
+
+        var user = await _userRepo.GetUserByIdAsync(userId);
         if (user is null)
             return await StatusCodes.Status404NotFound.ResultState("User not found");
-        
-        return await UserManager.DeleteUserAsync(user)
+
+        return await _userManager.DeleteUserAsync(user)
             ? await StatusCodes.Status200OK.ResultState("User deleted")
             : await StatusCodes.Status500InternalServerError.ResultState("Error when deleting user");
     }
+
+    #endregion
 
     #region TestMethods
 

@@ -9,14 +9,14 @@ namespace IdentityCore.Managers;
 
 public class UserManager
 {
-    private UserRepository UserRepo;
+    private readonly UserRepository _userRepo;
 
     public UserManager(UserRepository userRepo)
     {
-        UserRepo = userRepo;
+        _userRepo = userRepo;
     } 
 
-    public static List<TestUserResponse> GenerateUsers(int count, string password = null)
+    public static List<TestUserResponse> GenerateUsers(int count, string? password = null)
     {
         if (count < 1)
             return [];
@@ -31,7 +31,7 @@ public class UserManager
                     Id = Guid.NewGuid(),
                     Username = username,
                     Email = UserHelper.GenerateEmail(username),
-                    Password = password is null ? UserHelper.GeneratePassword(12) : password
+                    Password = password ?? UserHelper.GeneratePassword(12)
                 };
 
                 return user;
@@ -57,59 +57,59 @@ public class UserManager
             };
         });
 
-        return await UserRepo.AddedRange(usersToAdd);
+        return await _userRepo.AddedRange(usersToAdd);
 }
 
-    public async Task<User> CreateUser(UserRequest userRequest)
+    public async Task<User> CreateUser(UserCreateRequest userCreateRequest)
     {
         var salt = UserHelper.GetSalt();
         var user = new User
         {
             Id = Guid.NewGuid(),
-            Username = userRequest.Username,
-            Email = userRequest.Email,
+            Username = userCreateRequest.Username,
+            Email = userCreateRequest.Email,
             Salt = salt,
-            Password = UserHelper.GetPasswordHash(userRequest.Password, salt)
+            Password = UserHelper.GetPasswordHash(userCreateRequest.Password, salt)
         };
 
-        return await UserRepo.CreateAsync(user);
+        return await _userRepo.CreateAsync(user);
     }
 
-    public async Task<OperationResult<User>> UpdateUser(UserRequest userRequest, User user)
+    public async Task<OperationResult<User>> UpdateUser(UserUpdateRequest updateRequest, User user)
     {
         var result = new OperationResult<User>();
-        if (!string.IsNullOrWhiteSpace(userRequest.Username))
+        if (!string.IsNullOrWhiteSpace(updateRequest.Username))
         {
-            if (await UserRepo.UserExistsByUsernameAsync(user.Username))
+            if (await _userRepo.UserExistsByUsernameAsync(user.Username))
             {
                 result.Success = false;
                 result.ErrorMessage = "UserName is already taken.";
                 return result;
             }
 
-            user.Username = userRequest.Username;
+            user.Username = updateRequest.Username;
         }
 
-        if (!string.IsNullOrWhiteSpace(userRequest.Email))
+        if (!string.IsNullOrWhiteSpace(updateRequest.Email))
         {
-            if (await UserRepo.UserExistsByEmailAsync(user.Email))
+            if (await _userRepo.UserExistsByEmailAsync(user.Email))
             {
                 result.Success = false;
                 result.ErrorMessage = "Email is already taken.";
                 return result;
             }
 
-            user.Email = userRequest.Email;
+            user.Email = updateRequest.Email;
         }
 
-        if (!string.IsNullOrWhiteSpace(userRequest.Password))
+        if (!string.IsNullOrWhiteSpace(updateRequest.Password))
         {
             user.Salt = UserHelper.GetSalt();
-            user.Password = UserHelper.GetPasswordHash(userRequest.Password, user.Salt);
+            user.Password = UserHelper.GetPasswordHash(updateRequest.Password, user.Salt);
         }
 
 
-        if (await UserRepo.UpdateAsync(user))
+        if (await _userRepo.UpdateAsync(user))
         {
             result.Data = user;
             return result;
@@ -126,6 +126,6 @@ public class UserManager
         if (user is null)
             return false;
         
-        return await UserRepo.DeleteAsync(user);
+        return await _userRepo.DeleteAsync(user);
     }
 }
