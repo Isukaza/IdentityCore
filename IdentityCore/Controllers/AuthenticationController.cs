@@ -1,5 +1,5 @@
-﻿using Helpers;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using Helpers;
 
 namespace IdentityCore.Controllers;
 

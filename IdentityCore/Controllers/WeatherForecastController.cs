@@ -1,6 +1,6 @@
+using Microsoft.AspNetCore.Mvc;
 using Helpers;
 using IdentityCore.Models.Response;
-using Microsoft.AspNetCore.Mvc;
 
 namespace IdentityCore.Controllers;
 

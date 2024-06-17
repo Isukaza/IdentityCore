@@ -109,8 +109,8 @@ public class UserController : Controller
 
     #region TestMethods
 
-    #if DEBUG
-    
+#if DEBUG
+
     [HttpGet("salt/{size:int}")]
     [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
     public async Task<IActionResult> GenSalt(int size)
@@ -120,10 +120,10 @@ public class UserController : Controller
                 .ResultState("The salt size must be greater than 16 and less than 64 characters");
 
         var salt = UserHelper.GetSalt(size);
-        
+
         return await StatusCodes.Status200OK.ResultState("Salt", salt);
     }
-    
+
     [HttpGet("password/{size:int}")]
     [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
     public async Task<IActionResult> GenPassword(int size)
@@ -133,10 +133,10 @@ public class UserController : Controller
                 .ResultState("The password size must be greater than 12 and less than 64 characters");
 
         var pass = UserHelper.GeneratePassword(size);
-        
+
         return await StatusCodes.Status200OK.ResultState("Password", pass);
     }
-    
+
     [HttpGet("password-hash")]
     [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPasswordHash(string password, string salt)
@@ -144,16 +144,16 @@ public class UserController : Controller
         if (password.Length < 12 || password.Length > 64)
             return await StatusCodes.Status400BadRequest
                 .ResultState("The password size must be greater than 12 and less than 64 characters");
-        
+
         if (salt.Length < 12 || salt.Length > 64)
             return await StatusCodes.Status400BadRequest
                 .ResultState("The salt size must be greater than 16 and less than 64 characters");
 
         var passwordHash = UserHelper.GetPasswordHash(password, salt);
-        
+
         return await StatusCodes.Status200OK.ResultState("Password hash", passwordHash);
     }
-    
+
     [HttpGet("gen-users")]
     [ProducesResponseType(typeof(List<TestUserResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPasswordHash(int count)
@@ -163,10 +163,10 @@ public class UserController : Controller
                 .ResultState("The number of users for generation cannot be less than 1 and more than 1000");
 
         var users = UserManager.GenerateUsers(count);
-        
+
         return await StatusCodes.Status200OK.ResultState("Password hash", users);
     }
-    
+
     [HttpPost("generate-test-database")]
     [ProducesResponseType(typeof(List<TestUserResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPasswordHash(int count, string password)
@@ -174,19 +174,19 @@ public class UserController : Controller
         if (count < 1 || count > 1000)
             return await StatusCodes.Status400BadRequest
                 .ResultState("The number of users for generation cannot be less than 1 and more than 1000");
-        
+
         if (string.IsNullOrWhiteSpace(password) || password.Length < 12 || password.Length > 64)
             return await StatusCodes.Status400BadRequest
                 .ResultState("The password must be between 12 and 64 characters long");
 
         var users = UserManager.GenerateUsers(count, password);
-        var result = await UserManager.AddTestUsersToTheDatabase(users);
-        
+        var result = await _userManager.AddTestUsersToTheDatabase(users);
+
         return result
             ? await StatusCodes.Status200OK.ResultState("Password hash", users)
             : await StatusCodes.Status400BadRequest.ResultState("An error occurred while adding users");
     }
-    
+
 #endif
 
     #endregion

@@ -1,6 +1,6 @@
-﻿using Helpers;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Helpers;
 
 namespace IdentityCore.Controllers;
 
