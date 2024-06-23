@@ -15,54 +15,10 @@ public class UserManager
     {
         _userRepo = userRepo;
     } 
-
-    public static List<TestUserResponse> GenerateUsers(int count, string? password = null)
-    {
-        if (count < 1)
-            return [];
-
-        return Enumerable.Range(0, count)
-            .Select(_ =>
-            {
-                var username = UserHelper.GenerateUsername();
-
-                var user = new TestUserResponse
-                {
-                    Id = Guid.NewGuid(),
-                    Username = username,
-                    Email = UserHelper.GenerateEmail(username),
-                    Password = password ?? UserHelper.GeneratePassword(12)
-                };
-
-                return user;
-            })
-            .ToList();
-    }
-
-    public async Task<bool> AddTestUsersToTheDatabase(List<TestUserResponse> users)
-    {
-        if (users.Count == 0)
-            return false;
-
-        var usersToAdd = users.Select(user =>
-        {
-            var salt = UserHelper.GetSalt();
-            return new User
-            {
-                Id = Guid.NewGuid(),
-                Username = user.Username,
-                Email = user.Email,
-                Salt = salt,
-                Password = UserHelper.GetPasswordHash(user.Password, salt)
-            };
-        });
-
-        return await _userRepo.AddedRange(usersToAdd);
-}
-
+    
     public async Task<User> CreateUser(UserCreateRequest userCreateRequest)
     {
-        var salt = UserHelper.GetSalt();
+        var salt = UserHelper.GenerateSalt();
         var user = new User
         {
             Id = Guid.NewGuid(),
@@ -104,11 +60,10 @@ public class UserManager
 
         if (!string.IsNullOrWhiteSpace(updateRequest.Password))
         {
-            user.Salt = UserHelper.GetSalt();
+            user.Salt = UserHelper.GenerateSalt();
             user.Password = UserHelper.GetPasswordHash(updateRequest.Password, user.Salt);
         }
-
-
+        
         if (await _userRepo.UpdateAsync(user))
         {
             result.Data = user;
@@ -128,4 +83,88 @@ public class UserManager
         
         return await _userRepo.DeleteAsync(user);
     }
+
+    public async Task<OperationResult<User>> ValidateUser(UserLoginRequest loginRequest)
+    {
+        if (string.IsNullOrWhiteSpace(loginRequest.Email) || string.IsNullOrWhiteSpace(loginRequest.Password))
+        {
+            return new OperationResult<User>
+            {
+                Success = false,
+                ErrorMessage = "Email or password is invalid."
+            };
+        }
+
+        var user = await _userRepo.GetUserByEmailAsync(loginRequest.Email);
+        if (user == null)
+        {
+            return new OperationResult<User>
+            {
+                Success = false,
+                ErrorMessage = "Email or password is invalid."
+            };
+        }
+
+        var userPasswordHash = UserHelper.GetPasswordHash(loginRequest.Password, user.Salt);
+        if (userPasswordHash.Equals(user.Password))
+            return new OperationResult<User>
+            {
+                Data = user,
+                Success = true
+            };
+        
+        return new OperationResult<User>
+        {
+            Success = false,
+            ErrorMessage = "Email or password is invalid"
+        };
+    }
+
+    #region TestMetods
+
+    public static List<TestUserResponse> GenerateUsers(int count, string? password = null)
+    {
+        if (count < 1)
+            return [];
+
+        return Enumerable.Range(0, count)
+            .Select(_ =>
+            {
+                var username = UserHelper.GenerateUsername();
+
+                var user = new TestUserResponse
+                {
+                    Id = Guid.NewGuid(),
+                    Username = username,
+                    Email = UserHelper.GenerateEmail(username),
+                    Password = password ?? UserHelper.GeneratePassword()
+                };
+
+                return user;
+            })
+            .ToList();
+    }
+
+    public async Task<bool> AddTestUsersToTheDatabase(List<TestUserResponse> users)
+    {
+        if (users.Count == 0)
+            return false;
+
+        var usersToAdd = users.Select(user =>
+        {
+            var salt = UserHelper.GenerateSalt();
+            return new User
+            {
+                Id = Guid.NewGuid(),
+                Username = user.Username,
+                Email = user.Email,
+                Salt = salt,
+                Password = UserHelper.GetPasswordHash(user.Password, salt)
+            };
+        });
+
+        return await _userRepo.AddedRange(usersToAdd);
+    }
+
+    #endregion
 }
