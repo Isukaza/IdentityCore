@@ -31,6 +31,17 @@ public class IdentityCoreDbContext : DbContext
 
     #endregion
     
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        #region Users
+
+        modelBuilder.Entity<User>()
+            .HasIndex(u => u.Email)
+            .IsUnique();
+
+        #endregion
+    }
+    
     #region SaveFnction
 
     public bool SaveAndCompareAffectedRows(bool log = true)
