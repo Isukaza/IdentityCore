@@ -18,7 +18,7 @@ public class UserManager
     
     public async Task<User> CreateUser(UserCreateRequest userCreateRequest)
     {
-        var salt = UserHelper.GenerateSalt();
+        var salt = UserHelper.GetSalt();
         var user = new User
         {
             Id = Guid.NewGuid(),
@@ -60,7 +60,7 @@ public class UserManager
 
         if (!string.IsNullOrWhiteSpace(updateRequest.Password))
         {
-            user.Salt = UserHelper.GenerateSalt();
+            user.Salt = UserHelper.GetSalt();
             user.Password = UserHelper.GetPasswordHash(updateRequest.Password, user.Salt);
         }
         
@@ -122,7 +122,7 @@ public class UserManager
 
     #region TestMetods
 
-    public static List<TestUserResponse> GenerateUsers(int count, string? password = null)
+    public static List<TestUserResponse> GenerateUsers(int count, string password = null)
     {
         if (count < 1)
             return [];
@@ -137,7 +137,7 @@ public class UserManager
                     Id = Guid.NewGuid(),
                     Username = username,
                     Email = UserHelper.GenerateEmail(username),
-                    Password = password ?? UserHelper.GeneratePassword()
+                    Password = password ?? UserHelper.GeneratePassword(32)
                 };
 
                 return user;
@@ -152,7 +152,7 @@ public class UserManager
 
         var usersToAdd = users.Select(user =>
         {
-            var salt = UserHelper.GenerateSalt();
+            var salt = UserHelper.GetSalt();
             return new User
             {
                 Id = Guid.NewGuid(),

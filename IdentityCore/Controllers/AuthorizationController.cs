@@ -45,7 +45,7 @@ public class AuthorizationController : ControllerBase
     /// <response code="400">Email or password is invalid.</response>
     [HttpPost("login")]
     [AllowAnonymous]
-    [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
     public async Task<IActionResult> Login([FromBody] UserLoginRequest loginRequest)
     {
         var result = await _userManager.ValidateUser(loginRequest);
