@@ -19,4 +19,10 @@ public record User : BaseDbEntity
     [StringLength(255, ErrorMessage = "Must be between 8 and 255 characters", MinimumLength = 8)]
     [DataType(DataType.Password)]
     public required string Password { get; set; }
+    
+    #region Relational
+
+    public ICollection<RefreshToken> RefreshTokens { get; set; } = new HashSet<RefreshToken>();
+
+    #endregion
 }

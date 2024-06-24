@@ -54,8 +54,10 @@ builder.Services.AddDbContext<IdentityCoreDbContext>(options =>
 });
 
 builder.Services.AddScoped<UserRepository>();
+builder.Services.AddScoped<RefreshTokenRepository>();
 
 builder.Services.AddScoped<UserManager>();
+builder.Services.AddScoped<RefreshTokenManager>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
