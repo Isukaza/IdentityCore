@@ -18,7 +18,7 @@ public class UserManager
     
     public async Task<User> CreateUser(UserCreateRequest userCreateRequest)
     {
-        var salt = UserHelper.GetSalt();
+        var salt = UserHelper.GenerateSalt();
         var user = new User
         {
             Id = Guid.NewGuid(),
@@ -60,7 +60,7 @@ public class UserManager
 
         if (!string.IsNullOrWhiteSpace(updateRequest.Password))
         {
-            user.Salt = UserHelper.GetSalt();
+            user.Salt = UserHelper.GenerateSalt();
             user.Password = UserHelper.GetPasswordHash(updateRequest.Password, user.Salt);
         }
         
@@ -152,7 +152,7 @@ public class UserManager
 
         var usersToAdd = users.Select(user =>
         {
-            var salt = UserHelper.GetSalt();
+            var salt = UserHelper.GenerateSalt();
             return new User
             {
                 Id = Guid.NewGuid(),
