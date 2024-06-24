@@ -35,11 +35,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = JwtConfigConstants.Configs.Issuer,
+            ValidIssuer = Jwt.Configs.Issuer,
             ValidateAudience = true,
-            ValidAudience = JwtConfigConstants.Configs.Audience,
+            ValidAudience = Jwt.Configs.Audience,
             ValidateLifetime = true,
-            IssuerSigningKey = JwtConfigConstants.Configs.Key,
+            IssuerSigningKey = Jwt.Configs.Key,
             ValidateIssuerSigningKey = true,
         };
     });

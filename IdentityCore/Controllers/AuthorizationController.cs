@@ -61,11 +61,11 @@ public class AuthorizationController : ControllerBase
         };
 
         var jwt = new JwtSecurityToken(
-            issuer: JwtConfigConstants.Configs.Issuer,
-            audience: JwtConfigConstants.Configs.Audience,
+            issuer: Jwt.Configs.Issuer,
+            audience: Jwt.Configs.Audience,
             claims: claims,
-            expires: JwtConfigConstants.Configs.Expires,
-            signingCredentials: new SigningCredentials(JwtConfigConstants.Configs.Key, SecurityAlgorithms.HmacSha256));
+            expires: Jwt.Configs.Expires,
+            signingCredentials: new SigningCredentials(Jwt.Configs.Key, SecurityAlgorithms.HmacSha256));
         
         return await StatusCodes.Status200OK.ResultState("Successful login", new JwtSecurityTokenHandler().WriteToken(jwt));
     }

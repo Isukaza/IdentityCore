@@ -3,7 +3,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace IdentityCore.Configuration;
 
-public static class JwtConfigConstants
+public static class Jwt
 {
     private static class Keys
     {
