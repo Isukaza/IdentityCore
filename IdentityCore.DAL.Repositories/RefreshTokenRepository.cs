@@ -13,8 +13,8 @@ public class RefreshTokenRepository : DbRepositoryBase<RefreshToken>
     { }
 
     #endregion
-
-    public IEnumerable<RefreshToken> GetUserTokens(Guid id) =>
+    
+    private IQueryable<RefreshToken> GetUserTokens(Guid id) =>
          DbContext.RefreshTokens.Where(rt => rt.UserId == id);
 
     public async Task<int> GetCountUserTokens(Guid id) =>
@@ -22,7 +22,15 @@ public class RefreshTokenRepository : DbRepositoryBase<RefreshToken>
 
     public async Task<bool> DeleteOldestSession(Guid id)
     {
-        var oldestRToken = GetUserTokens(id).MinBy(rt => rt.Created);
-        return await base.DeleteAsync(oldestRToken);
+        var rTokens = GetUserTokens(id);
+
+        if (!rTokens.Any())
+            return true;
+
+        var oldestRToken = rTokens
+            .ToList()
+            .MinBy(rt => rt.Created);
+
+        return await base.DeleteAsync(oldestRToken!);
     }
 }

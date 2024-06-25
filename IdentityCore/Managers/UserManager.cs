@@ -1,4 +1,9 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Microsoft.IdentityModel.Tokens;
+
 using Helpers;
+using IdentityCore.Configuration;
 using IdentityCore.DAL.Models;
 using IdentityCore.DAL.Repository;
 using IdentityCore.Models;
@@ -10,10 +15,12 @@ namespace IdentityCore.Managers;
 public class UserManager
 {
     private readonly UserRepository _userRepo;
+    private readonly RefreshTokenManager _refreshTokenManager;
 
-    public UserManager(UserRepository userRepo)
+    public UserManager(UserRepository userRepo, RefreshTokenManager refreshTokenManager)
     {
         _userRepo = userRepo;
+        _refreshTokenManager = refreshTokenManager;
     } 
     
     public async Task<User> CreateUser(UserCreateRequest userCreateRequest)
@@ -29,6 +36,43 @@ public class UserManager
         };
 
         return await _userRepo.CreateAsync(user);
+    }
+    
+    public async Task<OperationResult<LoginResponse>> CreateLoginTokens(User user)
+    {
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.Name, user.Username),
+            new(ClaimTypes.Email, user.Email),
+            new(ClaimTypes.Role, "Admin")
+        };
+
+        var jwt = new JwtSecurityToken(
+            issuer: Jwt.Configs.Issuer,
+            audience: Jwt.Configs.Audience,
+            claims: claims,
+            expires: Jwt.Configs.Expires,
+            signingCredentials: new SigningCredentials(Jwt.Configs.Key, SecurityAlgorithms.HmacSha256));
+
+        var refreshToken = new RefreshToken
+        {
+            RefToken = UserHelper.GenerateRefreshToken(),
+            Expires = Rt.Configs.Expires,
+            User = user
+        };
+
+        if (!await _refreshTokenManager.AddToken(user, refreshToken))
+            return new OperationResult<LoginResponse> { ErrorMessage = "Error creating session" };
+
+        return new OperationResult<LoginResponse>
+        {
+            Data = new LoginResponse
+            {
+                Bearer = new JwtSecurityTokenHandler().WriteToken(jwt),
+                RefreshToken = refreshToken.RefToken
+            },
+            Success = true
+        };
     }
 
     public async Task<OperationResult<User>> UpdateUser(UserUpdateRequest updateRequest, User user)
@@ -119,7 +163,7 @@ public class UserManager
             ErrorMessage = "Email or password is invalid"
         };
     }
-
+    
     #region TestMetods
 
     public static List<TestUserResponse> GenerateUsers(int count, string password = null)
