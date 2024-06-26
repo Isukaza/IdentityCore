@@ -14,15 +14,25 @@ namespace IdentityCore.Managers;
 
 public class UserManager
 {
+    #region C-tor and fields
+
     private readonly UserRepository _userRepo;
+    private readonly RefreshTokenRepository _refreshTokenRepo;
+
     private readonly RefreshTokenManager _refreshTokenManager;
 
-    public UserManager(UserRepository userRepo, RefreshTokenManager refreshTokenManager)
+    public UserManager(UserRepository userRepo,
+        RefreshTokenRepository refreshTokenRepository,
+        RefreshTokenManager refreshTokenManager)
     {
         _userRepo = userRepo;
+        _refreshTokenRepo = refreshTokenRepository;
+
         _refreshTokenManager = refreshTokenManager;
-    } 
-    
+    }
+
+    #endregion
+
     public async Task<User> CreateUser(UserCreateRequest userCreateRequest)
     {
         var salt = UserHelper.GenerateSalt();
@@ -164,6 +174,21 @@ public class UserManager
         };
     }
     
+    public async Task<OperationResult<object>> Logout(string username, string refreshToken)
+    {
+        var user = await _userRepo.GetUserWithTokensByUsernameAsync(username);
+        if (user is null || user.RefreshTokens.Count == 0)
+            return new OperationResult<object>("The user was not found or was deleted");
+        
+        var userToken = user.RefreshTokens.FirstOrDefault(rt => rt.RefToken == refreshToken);
+        if (userToken is not null)
+            return await _refreshTokenRepo.DeleteAsync(userToken)
+                ? new OperationResult<object>()
+                : new OperationResult<object>("Error during deletion");
+
+        return new OperationResult<object>();
+    }
+
     #region TestMetods
 
     public static List<TestUserResponse> GenerateUsers(int count, string password = null)

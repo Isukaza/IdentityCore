@@ -27,6 +27,11 @@ public class UserRepository : DbRepositoryBase<User>
     public async Task<bool> UserExistsByIdAsync(Guid id) =>
         await GetUserByIdAsync(id) is not null;
     
+    public async Task<User> GetUserWithTokensByUsernameAsync(string username) =>
+        await DbContext.Users
+            .Include(rt => rt.RefreshTokens)
+            .FirstOrDefaultAsync(user => user.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+
     public async Task<bool> UserExistsByUsernameAsync(string username) =>
         await GetUserByUsernameAsync(username) is not null;
     
