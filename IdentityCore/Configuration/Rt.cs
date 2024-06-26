@@ -17,12 +17,10 @@ public static class Rt
         static Configs()
         {
             var configuration = GetConfiguration();
-            
             Expires = DateTime.UtcNow.Add(
                 TimeSpan.FromDays(int.TryParse(configuration[Keys.ExpiresKey], out var expires)
                     ? expires
                     : 7));
-            
             MaxSessions = int.TryParse(configuration[Keys.MaxSessionsKey], out var maxSessions)
                 ? maxSessions
                 : 5;

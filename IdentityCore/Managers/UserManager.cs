@@ -148,7 +148,7 @@ public class UserManager
             user.Salt = UserHelper.GenerateSalt();
             user.Password = UserHelper.GetPasswordHash(updateRequest.Password, user.Salt);
         }
-        
+
         if (await _userRepo.UpdateAsync(user))
         {
             result.Data = user;
@@ -157,7 +157,7 @@ public class UserManager
 
         result.Success = false;
         result.ErrorMessage = "Error updating user";
-        
+
         return result;
     }
 
@@ -165,10 +165,10 @@ public class UserManager
     {
         if (user is null)
             return false;
-        
+
         return await _userRepo.DeleteAsync(user);
     }
-
+    
     public async Task<OperationResult<User>> ValidateUser(UserLoginRequest loginRequest)
     {
         if (string.IsNullOrWhiteSpace(loginRequest.Email) || string.IsNullOrWhiteSpace(loginRequest.Password))
@@ -197,7 +197,7 @@ public class UserManager
                 Data = user,
                 Success = true
             };
-        
+
         return new OperationResult<User>
         {
             Success = false,

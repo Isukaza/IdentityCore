@@ -17,18 +17,10 @@ public class AuthorizationController : ControllerBase
     #region C-tor and fields
 
     private readonly UserManager _userManager;
-    private readonly RefreshTokenManager _refreshTokenManager;
 
-    private readonly UserRepository _userRepo;
-
-    public AuthorizationController(UserManager userManager,
-        RefreshTokenManager refreshTokenManager,
-        UserRepository userRepository)
+    public AuthorizationController(UserManager userManager)
     {
         _userManager = userManager;
-        _refreshTokenManager = refreshTokenManager;
-
-        _userRepo = userRepository;
     }
 
     #endregion
@@ -43,21 +35,20 @@ public class AuthorizationController : ControllerBase
     /// Login user
     /// </summary>
     /// <param name="loginRequest">JSON with authorization data fields.</param>
-    /// <returns>JWT token and Refresh token</returns>
+    /// <returns>JWT token and Refresh token.</returns>
     /// <response code="200">Successful login.</response>
     /// <response code="400">Email or password is invalid.</response>
+    /// <response code="401">Unauthorized.</response>
     [HttpPost("login")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> Login([FromBody] UserLoginRequest loginRequest)
     {
         var result = await _userManager.ValidateUser(loginRequest);
-
         if (!result.Success)
             return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
 
         var loginResponse = await _userManager.CreateLoginTokens(result.Data);
-
         return loginResponse.Success
             ? await StatusCodes.Status200OK.ResultState("Successful login", loginResponse.Data)
             : await StatusCodes.Status500InternalServerError.ResultState(loginResponse.ErrorMessage);

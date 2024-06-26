@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+
 using Helpers;
 using IdentityCore.Models.Response;
 
@@ -15,6 +17,7 @@ public class WeatherForecastController() : ControllerBase
     ];
 
     [HttpGet(Name = "GetWeatherForecast")]
+    [Authorize]
     public async Task<IActionResult> Get()
     {
         var weatherForecast = Enumerable.Range(1, 5).Select(index => new WeatherForecastResponse

@@ -7,7 +7,7 @@ namespace IdentityCore.DAL.Repository;
 
 public class RefreshTokenRepository : DbRepositoryBase<RefreshToken>
 {
-    #region Fields and c-tor
+    #region C-tor
 
     public RefreshTokenRepository(IdentityCoreDbContext dbContext) : base(dbContext)
     { }
