@@ -109,7 +109,7 @@ public class UserController : Controller
             return await StatusCodes.Status400BadRequest
                 .ResultState("The salt size must be greater than 16 and less than 64 characters");
 
-        var salt = UserHelper.GetSalt(size);
+        var salt = UserHelper.GenerateSalt(size);
 
         return await StatusCodes.Status200OK.ResultState("Salt", salt);
     }

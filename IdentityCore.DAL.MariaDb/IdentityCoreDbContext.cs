@@ -28,6 +28,7 @@ public class IdentityCoreDbContext : DbContext
     #region DbSet
 
     public virtual DbSet<User> Users { get; set; }
+    public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
 
     #endregion
     
@@ -38,6 +39,15 @@ public class IdentityCoreDbContext : DbContext
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Email)
             .IsUnique();
+
+        #endregion
+
+        #region Users + RefreshTokens
+
+        modelBuilder.Entity<RefreshToken>()
+            .HasOne(rt => rt.User)
+            .WithMany(u => u.RefreshTokens)
+            .HasForeignKey(rt => rt.UserId);
 
         #endregion
     }

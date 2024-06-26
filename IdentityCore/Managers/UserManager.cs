@@ -1,4 +1,9 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Microsoft.IdentityModel.Tokens;
+
 using Helpers;
+using IdentityCore.Configuration;
 using IdentityCore.DAL.Models;
 using IdentityCore.DAL.Repository;
 using IdentityCore.Models;
@@ -9,16 +14,28 @@ namespace IdentityCore.Managers;
 
 public class UserManager
 {
-    private readonly UserRepository _userRepo;
+    #region C-tor and fields
 
-    public UserManager(UserRepository userRepo)
+    private readonly UserRepository _userRepo;
+    private readonly RefreshTokenRepository _refreshTokenRepo;
+
+    private readonly RefreshTokenManager _refreshTokenManager;
+
+    public UserManager(UserRepository userRepo,
+        RefreshTokenRepository refreshTokenRepository,
+        RefreshTokenManager refreshTokenManager)
     {
         _userRepo = userRepo;
-    } 
-    
+        _refreshTokenRepo = refreshTokenRepository;
+
+        _refreshTokenManager = refreshTokenManager;
+    }
+
+    #endregion
+
     public async Task<User> CreateUser(UserCreateRequest userCreateRequest)
     {
-        var salt = UserHelper.GetSalt();
+        var salt = UserHelper.GenerateSalt();
         var user = new User
         {
             Id = Guid.NewGuid(),
@@ -31,16 +48,79 @@ public class UserManager
         return await _userRepo.CreateAsync(user);
     }
 
+    private string CreateJwt(User user)
+    {
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.Name, user.Username),
+            new(ClaimTypes.Email, user.Email),
+            new(ClaimTypes.Role, "Admin")
+        };
+
+        var jwt = new JwtSecurityToken(
+            issuer: Jwt.Configs.Issuer,
+            audience: Jwt.Configs.Audience,
+            claims: claims,
+            expires: Jwt.Configs.Expires,
+            signingCredentials: new SigningCredentials(Jwt.Configs.Key, SecurityAlgorithms.HmacSha256));
+
+        return new JwtSecurityTokenHandler().WriteToken(jwt);
+    }
+
+    public async Task<OperationResult<LoginResponse>> CreateLoginTokens(User user)
+    {
+        var refreshToken = new RefreshToken
+        {
+            RefToken = UserHelper.GenerateRefreshToken(),
+            Expires = Rt.Configs.Expires,
+            User = user
+        };
+
+        if (!await _refreshTokenManager.AddToken(user, refreshToken))
+            return new OperationResult<LoginResponse>("Error creating session");
+
+        var loginResponse = new LoginResponse
+        {
+            Bearer = CreateJwt(user),
+            RefreshToken = refreshToken.RefToken
+        };
+
+        return new OperationResult<LoginResponse>(loginResponse);
+    }
+
+    public async Task<OperationResult<LoginResponse>> RefreshLoginTokens(string username, string refreshToken)
+    {
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(refreshToken))
+            return new OperationResult<LoginResponse>("Invalid username or refresh toke");
+
+        var user = await _userRepo.GetUserWithTokensByUsernameAsync(username);
+        if (user is null || user.RefreshTokens.Count == 0)
+            return new OperationResult<LoginResponse>("Invalid username or refresh toke");
+
+        var userToken = user.RefreshTokens.FirstOrDefault(rt => rt.RefToken == refreshToken);
+        if (userToken is null)
+            return new OperationResult<LoginResponse>("Invalid username or refresh toke");
+
+        var updatedToken = await _refreshTokenManager.RefreshToken(userToken);
+        if (string.IsNullOrWhiteSpace(updatedToken))
+            return new OperationResult<LoginResponse>("Invalid operation");
+
+        var loginResponse = new LoginResponse
+        {
+            Bearer = CreateJwt(user),
+            RefreshToken = updatedToken
+        };
+
+        return new OperationResult<LoginResponse>(loginResponse);
+    }
+
     public async Task<OperationResult<User>> UpdateUser(UserUpdateRequest updateRequest, User user)
     {
-        var result = new OperationResult<User>();
         if (!string.IsNullOrWhiteSpace(updateRequest.Username))
         {
             if (await _userRepo.UserExistsByUsernameAsync(user.Username))
             {
-                result.Success = false;
-                result.ErrorMessage = "UserName is already taken.";
-                return result;
+                return new OperationResult<User>("UserName is already taken");
             }
 
             user.Username = updateRequest.Username;
@@ -49,75 +129,62 @@ public class UserManager
         if (!string.IsNullOrWhiteSpace(updateRequest.Email))
         {
             if (await _userRepo.UserExistsByEmailAsync(user.Email))
-            {
-                result.Success = false;
-                result.ErrorMessage = "Email is already taken.";
-                return result;
-            }
+                return new OperationResult<User>("Email is already taken");
 
             user.Email = updateRequest.Email;
         }
 
         if (!string.IsNullOrWhiteSpace(updateRequest.Password))
         {
-            user.Salt = UserHelper.GetSalt();
+            user.Salt = UserHelper.GenerateSalt();
             user.Password = UserHelper.GetPasswordHash(updateRequest.Password, user.Salt);
         }
-        
+
         if (await _userRepo.UpdateAsync(user))
         {
-            result.Data = user;
-            return result;
+            return new OperationResult<User>(user);
         }
 
-        result.Success = false;
-        result.ErrorMessage = "Error updating user";
-        
-        return result;
+        return new OperationResult<User>("Error updating user");
     }
 
     public async Task<bool> DeleteUserAsync(User user)
     {
         if (user is null)
             return false;
-        
+
         return await _userRepo.DeleteAsync(user);
     }
 
     public async Task<OperationResult<User>> ValidateUser(UserLoginRequest loginRequest)
     {
         if (string.IsNullOrWhiteSpace(loginRequest.Email) || string.IsNullOrWhiteSpace(loginRequest.Password))
-        {
-            return new OperationResult<User>
-            {
-                Success = false,
-                ErrorMessage = "Email or password is invalid."
-            };
-        }
+            return new OperationResult<User>("Email or password is invalid");
 
         var user = await _userRepo.GetUserByEmailAsync(loginRequest.Email);
         if (user == null)
-        {
-            return new OperationResult<User>
-            {
-                Success = false,
-                ErrorMessage = "Email or password is invalid."
-            };
-        }
+            return new OperationResult<User>("Email or password is invalid");
 
         var userPasswordHash = UserHelper.GetPasswordHash(loginRequest.Password, user.Salt);
-        if (userPasswordHash.Equals(user.Password))
-            return new OperationResult<User>
-            {
-                Data = user,
-                Success = true
-            };
-        
-        return new OperationResult<User>
-        {
-            Success = false,
-            ErrorMessage = "Email or password is invalid"
-        };
+
+        return userPasswordHash.Equals(user.Password)
+            ? new OperationResult<User>(user)
+            : new OperationResult<User>("Email or password is invalid");
+    }
+
+    public async Task<OperationResult<object>> Logout(string username, string refreshToken)
+    {
+        var user = await _userRepo.GetUserWithTokensByUsernameAsync(username);
+        if (user is null || user.RefreshTokens.Count == 0)
+            return new OperationResult<object>("The user was not found or was deleted");
+
+        var userToken = user.RefreshTokens.FirstOrDefault(rt => rt.RefToken == refreshToken);
+        if (userToken is not null)
+            return await _refreshTokenRepo.DeleteAsync(userToken)
+                ? new OperationResult<object>()
+                : new OperationResult<object>("Error during deletion");
+
+        return new OperationResult<object>();
     }
 
     #region TestMetods
@@ -152,7 +219,7 @@ public class UserManager
 
         var usersToAdd = users.Select(user =>
         {
-            var salt = UserHelper.GetSalt();
+            var salt = UserHelper.GenerateSalt();
             return new User
             {
                 Id = Guid.NewGuid(),
