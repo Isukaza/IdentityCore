@@ -47,8 +47,8 @@ public class UserManager
 
         return await _userRepo.CreateAsync(user);
     }
-    
-    public async Task<OperationResult<LoginResponse>> CreateLoginTokens(User user)
+
+    private string CreateJwt(User user)
     {
         var claims = new List<Claim>
         {
@@ -64,6 +64,11 @@ public class UserManager
             expires: Jwt.Configs.Expires,
             signingCredentials: new SigningCredentials(Jwt.Configs.Key, SecurityAlgorithms.HmacSha256));
 
+        return new JwtSecurityTokenHandler().WriteToken(jwt);
+    }
+
+    public async Task<OperationResult<LoginResponse>> CreateLoginTokens(User user)
+    {
         var refreshToken = new RefreshToken
         {
             RefToken = UserHelper.GenerateRefreshToken(),
@@ -78,13 +83,39 @@ public class UserManager
         {
             Data = new LoginResponse
             {
-                Bearer = new JwtSecurityTokenHandler().WriteToken(jwt),
+                Bearer = CreateJwt(user),
                 RefreshToken = refreshToken.RefToken
             },
             Success = true
         };
     }
 
+    public async Task<OperationResult<LoginResponse>> RefreshLoginTokens(string username, string refreshToken)
+    {
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(refreshToken))
+            return new OperationResult<LoginResponse>("Invalid username or refresh toke");
+        
+        var user = await _userRepo.GetUserWithTokensByUsernameAsync(username);
+        if (user is null || user.RefreshTokens.Count == 0)
+            return new OperationResult<LoginResponse>("Invalid username or refresh toke");
+
+        var userToken = user.RefreshTokens.FirstOrDefault(rt => rt.RefToken == refreshToken);
+        if (userToken is null)
+            return new OperationResult<LoginResponse>("Invalid username or refresh toke");
+
+        var updatedToken = await _refreshTokenManager.RefreshToken(userToken);
+        if (string.IsNullOrWhiteSpace(updatedToken))
+            return new OperationResult<LoginResponse>("Invalid operation");
+
+        var loginResponse = new LoginResponse
+        {
+            Bearer = CreateJwt(user),
+            RefreshToken = updatedToken
+        };
+
+        return new OperationResult<LoginResponse>(loginResponse);
+    }
+    
     public async Task<OperationResult<User>> UpdateUser(UserUpdateRequest updateRequest, User user)
     {
         var result = new OperationResult<User>();

@@ -17,12 +17,18 @@ public class AuthorizationController : ControllerBase
     #region C-tor and fields
 
     private readonly UserManager _userManager;
-    private readonly RefreshTokenRepository _refreshTokenRepo;
+    private readonly RefreshTokenManager _refreshTokenManager;
 
-    public AuthorizationController(UserManager userManager, RefreshTokenRepository refreshTokenRepository)
+    private readonly UserRepository _userRepo;
+
+    public AuthorizationController(UserManager userManager,
+        RefreshTokenManager refreshTokenManager,
+        UserRepository userRepository)
     {
         _userManager = userManager;
-        _refreshTokenRepo = refreshTokenRepository;
+        _refreshTokenManager = refreshTokenManager;
+
+        _userRepo = userRepository;
     }
 
     #endregion
@@ -55,6 +61,24 @@ public class AuthorizationController : ControllerBase
         return loginResponse.Success
             ? await StatusCodes.Status200OK.ResultState("Successful login", loginResponse.Data)
             : await StatusCodes.Status500InternalServerError.ResultState(loginResponse.ErrorMessage);
+    }
+
+    /// <summary>
+    /// Get new JWT access tokens and Refresh Tokens using the refresh token.
+    /// </summary>
+    /// <param name="refreshTokenRequest">JSON with data fields to update the access token.</param>
+    /// <returns>JWT Access token and Refresh token.</returns>
+    /// <response code="200">Successful refresh.</response>
+    [HttpPost("refresh")]
+    [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest refreshTokenRequest)
+    {
+        var loginResponse = await _userManager
+            .RefreshLoginTokens(refreshTokenRequest.Username, refreshTokenRequest.RefreshToken);
+
+        return loginResponse.Success
+            ? await StatusCodes.Status200OK.ResultState("Successful login refresh", loginResponse.Data)
+            : await StatusCodes.Status400BadRequest.ResultState(loginResponse.ErrorMessage);
     }
 
     /// <summary>
