@@ -77,24 +77,22 @@ public class UserManager
         };
 
         if (!await _refreshTokenManager.AddToken(user, refreshToken))
-            return new OperationResult<LoginResponse> { ErrorMessage = "Error creating session" };
+            return new OperationResult<LoginResponse>("Error creating session");
 
-        return new OperationResult<LoginResponse>
+        var loginResponse = new LoginResponse
         {
-            Data = new LoginResponse
-            {
-                Bearer = CreateJwt(user),
-                RefreshToken = refreshToken.RefToken
-            },
-            Success = true
+            Bearer = CreateJwt(user),
+            RefreshToken = refreshToken.RefToken
         };
+
+        return new OperationResult<LoginResponse>(loginResponse);
     }
 
     public async Task<OperationResult<LoginResponse>> RefreshLoginTokens(string username, string refreshToken)
     {
         if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(refreshToken))
             return new OperationResult<LoginResponse>("Invalid username or refresh toke");
-        
+
         var user = await _userRepo.GetUserWithTokensByUsernameAsync(username);
         if (user is null || user.RefreshTokens.Count == 0)
             return new OperationResult<LoginResponse>("Invalid username or refresh toke");
@@ -115,17 +113,14 @@ public class UserManager
 
         return new OperationResult<LoginResponse>(loginResponse);
     }
-    
+
     public async Task<OperationResult<User>> UpdateUser(UserUpdateRequest updateRequest, User user)
     {
-        var result = new OperationResult<User>();
         if (!string.IsNullOrWhiteSpace(updateRequest.Username))
         {
             if (await _userRepo.UserExistsByUsernameAsync(user.Username))
             {
-                result.Success = false;
-                result.ErrorMessage = "UserName is already taken.";
-                return result;
+                return new OperationResult<User>("UserName is already taken");
             }
 
             user.Username = updateRequest.Username;
@@ -134,11 +129,7 @@ public class UserManager
         if (!string.IsNullOrWhiteSpace(updateRequest.Email))
         {
             if (await _userRepo.UserExistsByEmailAsync(user.Email))
-            {
-                result.Success = false;
-                result.ErrorMessage = "Email is already taken.";
-                return result;
-            }
+                return new OperationResult<User>("Email is already taken");
 
             user.Email = updateRequest.Email;
         }
@@ -151,14 +142,10 @@ public class UserManager
 
         if (await _userRepo.UpdateAsync(user))
         {
-            result.Data = user;
-            return result;
+            return new OperationResult<User>(user);
         }
 
-        result.Success = false;
-        result.ErrorMessage = "Error updating user";
-
-        return result;
+        return new OperationResult<User>("Error updating user");
     }
 
     public async Task<bool> DeleteUserAsync(User user)
@@ -168,49 +155,29 @@ public class UserManager
 
         return await _userRepo.DeleteAsync(user);
     }
-    
+
     public async Task<OperationResult<User>> ValidateUser(UserLoginRequest loginRequest)
     {
         if (string.IsNullOrWhiteSpace(loginRequest.Email) || string.IsNullOrWhiteSpace(loginRequest.Password))
-        {
-            return new OperationResult<User>
-            {
-                Success = false,
-                ErrorMessage = "Email or password is invalid."
-            };
-        }
+            return new OperationResult<User>("Email or password is invalid");
 
         var user = await _userRepo.GetUserByEmailAsync(loginRequest.Email);
         if (user == null)
-        {
-            return new OperationResult<User>
-            {
-                Success = false,
-                ErrorMessage = "Email or password is invalid."
-            };
-        }
+            return new OperationResult<User>("Email or password is invalid");
 
         var userPasswordHash = UserHelper.GetPasswordHash(loginRequest.Password, user.Salt);
-        if (userPasswordHash.Equals(user.Password))
-            return new OperationResult<User>
-            {
-                Data = user,
-                Success = true
-            };
 
-        return new OperationResult<User>
-        {
-            Success = false,
-            ErrorMessage = "Email or password is invalid"
-        };
+        return userPasswordHash.Equals(user.Password)
+            ? new OperationResult<User>(user)
+            : new OperationResult<User>("Email or password is invalid");
     }
-    
+
     public async Task<OperationResult<object>> Logout(string username, string refreshToken)
     {
         var user = await _userRepo.GetUserWithTokensByUsernameAsync(username);
         if (user is null || user.RefreshTokens.Count == 0)
             return new OperationResult<object>("The user was not found or was deleted");
-        
+
         var userToken = user.RefreshTokens.FirstOrDefault(rt => rt.RefToken == refreshToken);
         if (userToken is not null)
             return await _refreshTokenRepo.DeleteAsync(userToken)
