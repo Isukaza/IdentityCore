@@ -26,7 +26,7 @@ public class UserController : Controller
 
     #endregion
 
-    #region GET
+    #region CRUD
     
     [HttpGet("{useId:guid}")]
     [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]
@@ -41,17 +41,19 @@ public class UserController : Controller
             ? await StatusCodes.Status200OK.ResultState("User info", user.ToUserResponse())
             : await StatusCodes.Status404NotFound.ResultState($"User by id:{useId} not found");
     }
-
-    #endregion
-
-    #region CRUD
-
-    [HttpPut("create")]
+    
+    [HttpPost("registration")]
     [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
-    public async Task<IActionResult> CreateUser([FromBody] UserCreateRequest userCreateRequest)
+    public async Task<IActionResult> RegistrationUser([FromBody] UserCreateRequest userCreateRequest)
     {
+        var errorMessage = await _userManager.ValidateRegistration(userCreateRequest);
+        if (!string.IsNullOrEmpty(errorMessage))
+            return await StatusCodes.Status400BadRequest.ResultState(errorMessage);
+        
         var userResponse = await _userManager.CreateUser(userCreateRequest);
-        return await StatusCodes.Status201Created.ResultState("User created", userResponse.Id);
+        return userResponse is null
+            ? await StatusCodes.Status500InternalServerError.ResultState("Error creating user")
+            : await StatusCodes.Status201Created.ResultState("User created", userResponse.Id);
     }
 
     [HttpPut("update")]

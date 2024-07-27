@@ -25,12 +25,6 @@ public class AuthorizationController : ControllerBase
 
     #endregion
 
-    [HttpPost("register")]
-    public async Task<IActionResult> Register()
-    {
-        return await StatusCodes.Status200OK.ResultState();
-    }
-
     /// <summary>
     /// Login user
     /// </summary>
@@ -44,7 +38,7 @@ public class AuthorizationController : ControllerBase
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> Login([FromBody] UserLoginRequest loginRequest)
     {
-        var result = await _userManager.ValidateUser(loginRequest);
+        var result = await _userManager.ValidateLogin(loginRequest);
         if (!result.Success)
             return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
 
@@ -90,9 +84,9 @@ public class AuthorizationController : ControllerBase
         if (string.IsNullOrWhiteSpace(username))
             return await StatusCodes.Status400BadRequest.ResultState("Invalid jwt");
 
-        var result = await _userManager.Logout(username, logoutRequest.RefreshToken);
-        return result.Success
+        var errorMessage = await _userManager.Logout(username, logoutRequest.RefreshToken);
+        return string.IsNullOrEmpty(errorMessage)
             ? await StatusCodes.Status200OK.ResultState()
-            : await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
+            : await StatusCodes.Status400BadRequest.ResultState(errorMessage);
     }
 }
