@@ -48,7 +48,7 @@ public class UserManager
         return await _userRepo.CreateAsync(user);
     }
 
-    private string CreateJwt(User user)
+    private static string CreateJwt(User user)
     {
         var claims = new List<Claim>
         {
@@ -156,7 +156,7 @@ public class UserManager
         return await _userRepo.DeleteAsync(user);
     }
 
-    public async Task<OperationResult<User>> ValidateUser(UserLoginRequest loginRequest)
+    public async Task<OperationResult<User>> ValidateLogin(UserLoginRequest loginRequest)
     {
         if (string.IsNullOrWhiteSpace(loginRequest.Email) || string.IsNullOrWhiteSpace(loginRequest.Password))
             return new OperationResult<User>("Email or password is invalid");
@@ -172,19 +172,37 @@ public class UserManager
             : new OperationResult<User>("Email or password is invalid");
     }
 
-    public async Task<OperationResult<object>> Logout(string username, string refreshToken)
+    public async Task<string> ValidateRegistration(UserCreateRequest userCreateRequest)
+    {
+        if (string.IsNullOrWhiteSpace(userCreateRequest.Email)
+            || string.IsNullOrWhiteSpace(userCreateRequest.Username)
+            || string.IsNullOrWhiteSpace(userCreateRequest.Password))
+            return "Invalid input data";
+
+        var existingEmailUser = await _userRepo.GetUserByEmailAsync(userCreateRequest.Email);
+        if (existingEmailUser != null)
+            return "Email is already taken";
+
+        var existingUsernameUser = await _userRepo.GetUserByUsernameAsync(userCreateRequest.Username);
+        if (existingUsernameUser != null)
+            return "A user with this username exists";
+
+        return string.Empty;
+    }
+
+    public async Task<string> Logout(string username, string refreshToken)
     {
         var user = await _userRepo.GetUserWithTokensByUsernameAsync(username);
         if (user is null || user.RefreshTokens.Count == 0)
-            return new OperationResult<object>("The user was not found or was deleted");
+            return "The user was not found or was deleted";
 
         var userToken = user.RefreshTokens.FirstOrDefault(rt => rt.RefToken == refreshToken);
         if (userToken is not null)
             return await _refreshTokenRepo.DeleteAsync(userToken)
-                ? new OperationResult<object>()
-                : new OperationResult<object>("Error during deletion");
+                ? string.Empty
+                : "Error during deletion";
 
-        return new OperationResult<object>();
+        return string.Empty;
     }
 
     #region TestMetods
