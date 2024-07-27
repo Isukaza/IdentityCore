@@ -18,7 +18,7 @@ public static class Jwt
     {
         public static readonly string Issuer;
         public static readonly string Audience;
-        public static readonly DateTime Expires;
+        public static readonly TimeSpan Expires;
         public static readonly SymmetricSecurityKey Key;
 
         static Configs()
@@ -26,10 +26,9 @@ public static class Jwt
             var configuration = GetConfiguration();
             Issuer = configuration[Keys.IssuerKey];
             Audience = configuration[Keys.AudienceKey];
-            Expires = DateTime.UtcNow.Add(
-                TimeSpan.FromMinutes(int.TryParse(configuration[Keys.ExpiresKey], out var expires)
+            Expires = TimeSpan.FromMinutes(int.TryParse(configuration[Keys.ExpiresKey], out var expires)
                     ? expires
-                    : 2));
+                    : 2);
             Key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration[Keys.KeyKey] ?? string.Empty));
         }
 
