@@ -61,7 +61,7 @@ public class UserManager
             issuer: Jwt.Configs.Issuer,
             audience: Jwt.Configs.Audience,
             claims: claims,
-            expires: Jwt.Configs.Expires,
+            expires: DateTime.UtcNow.Add(Jwt.Configs.Expires),
             signingCredentials: new SigningCredentials(Jwt.Configs.Key, SecurityAlgorithms.HmacSha256));
 
         return new JwtSecurityTokenHandler().WriteToken(jwt);
