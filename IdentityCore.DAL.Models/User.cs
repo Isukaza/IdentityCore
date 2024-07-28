@@ -16,13 +16,16 @@ public record User : BaseDbEntity
     public required string Salt { get; set; }
 
     [Required(ErrorMessage = "Password is required")]
-    [StringLength(255, ErrorMessage = "Must be between 8 and 255 characters", MinimumLength = 8)]
+    [StringLength(255, ErrorMessage = "Must be between 12 and 255 characters", MinimumLength = 12)]
     [DataType(DataType.Password)]
     public required string Password { get; set; }
+    
+    public bool IsActive { get; set; }
     
     #region Relational
 
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new HashSet<RefreshToken>();
+    public RegistrationTokens? RegistrationTokens { get; set; }
 
     #endregion
 }
