@@ -58,6 +58,7 @@ builder.Services.AddScoped<RefreshTokenRepository>();
 
 builder.Services.AddScoped<UserManager>();
 builder.Services.AddScoped<RefreshTokenManager>();
+builder.Services.AddScoped<MailManager>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
