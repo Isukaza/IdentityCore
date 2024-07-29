@@ -1,3 +1,4 @@
+using System.Net;
 using Amazon;
 
 namespace IdentityCore.Configuration;
@@ -47,7 +48,8 @@ public static class Mail
 
         public static string GetConfirmationLink(string token)
         {
-            return Host.Configs.Host + Host.Configs.RegistrationConfirmationPath + token;
+            var tokenForUrl = WebUtility.UrlEncode(token);
+            return Host.Configs.Host + Host.Configs.RegistrationConfirmationPath + tokenForUrl;
         }
     }
 }

@@ -32,7 +32,7 @@ public class RefreshTokenManager
 
             for (var i = 0; i < tokensToRemove; i++)
             {
-                await _refreshTokenRepo.DeleteOldestSession(user.Id);
+                _ = await _refreshTokenRepo.DeleteOldestSession(user.Id);
             }
         }
 

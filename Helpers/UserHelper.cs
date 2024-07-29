@@ -1,9 +1,10 @@
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 
 namespace Helpers;
 
-public class UserHelper
+public static class UserHelper
 {
     #region Fields
 
@@ -33,27 +34,18 @@ public class UserHelper
     #endregion
 
     #region GetMethods
-
-    public static string GetHashStrings(params string[] args)
-    {
-        if (args == null || args.Length == 0)
-            throw new ArgumentException("At least one string argument is required.", nameof(args));
-
-        var combinedString = new StringBuilder();
-
-        foreach (var arg in args)
-            if (!string.IsNullOrWhiteSpace(arg))
-                combinedString.Append(arg);
-
-        var hashBytes = SHA512.HashData(Encoding.UTF8.GetBytes(combinedString.ToString()));
-        return Convert.ToBase64String(hashBytes);
-    }
     
     public static string GetPasswordHash(string password, string salt)
     {
-        var bytePass = Encoding.Unicode.GetBytes(password + salt);
-        var hashBytes = SHA512.HashData(bytePass);
-        return Convert.ToBase64String(hashBytes);
+        return DataHelper.GetHashFromStrings(password, salt);
+    }
+
+    public static string GetConfirmationRegistrationToken(Guid id)
+    {
+        var timestamp = DateTime.UtcNow.ToString("o");
+        var data = timestamp + id;
+        var hashData = SHA512.HashData(Encoding.UTF8.GetBytes(data));
+        return Convert.ToBase64String(hashData);
     }
     
     #endregion

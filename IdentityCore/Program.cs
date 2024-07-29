@@ -55,9 +55,11 @@ builder.Services.AddDbContext<IdentityCoreDbContext>(options =>
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<RefreshTokenRepository>();
+builder.Services.AddScoped<ConfirmationRegistrationRepository>();
 
 builder.Services.AddScoped<UserManager>();
 builder.Services.AddScoped<RefreshTokenManager>();
+builder.Services.AddScoped<ConfirmationRegistrationManager>();
 builder.Services.AddScoped<MailManager>();
 
 builder.Services.AddControllers()

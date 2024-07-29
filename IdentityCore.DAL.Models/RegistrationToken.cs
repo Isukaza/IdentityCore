@@ -3,7 +3,7 @@ using IdentityCore.DAL.Models.Base;
 
 namespace IdentityCore.DAL.Models;
 
-public record RegistrationTokens : BaseDbEntity
+public record RegistrationToken : BaseDbEntity
 {
     [Required(ErrorMessage = "RegistrationToken is required")]
     public required string RegToken { get; set; }

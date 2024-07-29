@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 using Helpers;
-using IdentityCore.DAL.Repository;
 using IdentityCore.Managers;
 using IdentityCore.Models.Request;
 using IdentityCore.Models.Response;

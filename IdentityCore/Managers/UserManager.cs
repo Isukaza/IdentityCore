@@ -36,6 +36,7 @@ public class UserManager
     public async Task<User> CreateUser(UserCreateRequest userCreateRequest)
     {
         var salt = UserHelper.GenerateSalt();
+
         var user = new User
         {
             Id = Guid.NewGuid(),
@@ -43,6 +44,13 @@ public class UserManager
             Email = userCreateRequest.Email,
             Salt = salt,
             Password = UserHelper.GetPasswordHash(userCreateRequest.Password, salt)
+        };
+        
+        user.RegistrationTokens = new RegistrationToken
+        {
+            RegToken = UserHelper.GetConfirmationRegistrationToken(user.Id),
+            Expires = DateTime.UtcNow.Add(TimeSpan.FromHours(1)),
+            User = user
         };
 
         return await _userRepo.CreateAsync(user);
