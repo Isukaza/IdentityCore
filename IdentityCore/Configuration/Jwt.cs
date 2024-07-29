@@ -23,21 +23,13 @@ public static class Jwt
 
         static Configs()
         {
-            var configuration = GetConfiguration();
+            var configuration = ConfigBase.GetConfiguration();
             Issuer = configuration[Keys.IssuerKey];
             Audience = configuration[Keys.AudienceKey];
             Expires = TimeSpan.FromMinutes(int.TryParse(configuration[Keys.ExpiresKey], out var expires)
                     ? expires
                     : 2);
             Key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration[Keys.KeyKey] ?? string.Empty));
-        }
-
-        private static IConfigurationRoot GetConfiguration()
-        {
-            return new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                .Build();
         }
     }
 }
