@@ -21,7 +21,7 @@ public class RefreshTokenManager
 
         return await _refreshTokenRepo.UpdateAsync(token) ? token.RefToken : string.Empty;
     }
-    
+
     public async Task<bool> AddToken(User user, RefreshToken refreshToken)
     {
         var countTokens = await _refreshTokenRepo.GetCountUserTokens(user.Id);
@@ -32,7 +32,7 @@ public class RefreshTokenManager
 
             for (var i = 0; i < tokensToRemove; i++)
             {
-                await _refreshTokenRepo.DeleteOldestSession(user.Id);
+                _ = await _refreshTokenRepo.DeleteOldestSession(user.Id);
             }
         }
 
