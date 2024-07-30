@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text;
 
 namespace Helpers;
 
@@ -6,6 +7,21 @@ public static class DataHelper
 {
     private const string Chars =
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789!@#$%^&*()-_";
+
+    public static string GetHashStrings(params string[] args)
+    {
+        if (args == null || args.Length == 0)
+            throw new ArgumentException("At least one string argument is required.", nameof(args));
+
+        var combinedString = new StringBuilder();
+
+        foreach (var arg in args)
+            if (!string.IsNullOrWhiteSpace(arg))
+                combinedString.Append(arg);
+
+        var hashBytes = SHA512.HashData(Encoding.UTF8.GetBytes(combinedString.ToString()));
+        return Convert.ToBase64String(hashBytes);
+    }
 
     public static byte[] GenerateRandomBytes(int length = 64)
     {
@@ -23,9 +39,7 @@ public static class DataHelper
         if (length < 1)
             throw new ArgumentOutOfRangeException(nameof(length), "Length must be a positive number.");
 
-        var str = GenerateRandomBytes(length)
-            .Select(b => Chars[b % Chars.Length])
-            .ToString();
+        var str = new string(GenerateRandomBytes(length).Select(b => Chars[b % Chars.Length]).ToArray());
 
         if (string.IsNullOrEmpty(str))
             throw new InvalidOperationException("Generated string is empty, which indicates a logical error.");
