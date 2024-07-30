@@ -11,16 +11,15 @@ public static class Rt
 
     public static class Configs
     {
-        public static readonly DateTime Expires;
+        public static readonly TimeSpan Expires;
         public static readonly int MaxSessions;
 
         static Configs()
         {
             var configuration = GetConfiguration();
-            Expires = DateTime.UtcNow.Add(
-                TimeSpan.FromDays(int.TryParse(configuration[Keys.ExpiresKey], out var expires)
-                    ? expires
-                    : 7));
+            Expires = TimeSpan.FromDays(int.TryParse(configuration[Keys.ExpiresKey], out var expires)
+                ? expires
+                : 7);
             MaxSessions = int.TryParse(configuration[Keys.MaxSessionsKey], out var maxSessions)
                 ? maxSessions
                 : 5;
