@@ -59,6 +59,7 @@ public class UserRepository : DbRepositoryBase<User>
         }
         catch
         {
+            await transaction.RollbackAsync();
             return false;
         }
     }
