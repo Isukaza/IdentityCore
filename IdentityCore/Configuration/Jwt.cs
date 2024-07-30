@@ -27,8 +27,8 @@ public static class Jwt
             Issuer = configuration[Keys.IssuerKey];
             Audience = configuration[Keys.AudienceKey];
             Expires = TimeSpan.FromMinutes(int.TryParse(configuration[Keys.ExpiresKey], out var expires)
-                    ? expires
-                    : 2);
+                ? expires
+                : 2);
             Key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration[Keys.KeyKey] ?? string.Empty));
         }
 

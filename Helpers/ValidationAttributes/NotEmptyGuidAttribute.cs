@@ -12,6 +12,7 @@ public class NotEmptyGuidAttribute(string errorMessage) : ValidationAttribute
         {
             return new ValidationResult(ErrorMessage);
         }
+
         return ValidationResult.Success;
     }
 }

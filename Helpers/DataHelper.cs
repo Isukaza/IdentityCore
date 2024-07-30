@@ -26,10 +26,10 @@ public static class DataHelper
         var str = GenerateRandomBytes(length)
             .Select(b => Chars[b % Chars.Length])
             .ToString();
-        
+
         if (string.IsNullOrEmpty(str))
             throw new InvalidOperationException("Generated string is empty, which indicates a logical error.");
-        
+
         return str;
     }
 }

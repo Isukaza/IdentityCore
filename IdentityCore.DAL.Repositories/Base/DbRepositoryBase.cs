@@ -16,7 +16,7 @@ public abstract class DbRepositoryBase<T>
     }
 
     #endregion
-    
+
     #region CRUD
 
     public virtual T Create(T entity)

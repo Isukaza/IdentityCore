@@ -20,7 +20,7 @@ public class UserUpdateRequest : IUser
     [StringLength(255, ErrorMessage = "The password must be between 12 and 255 characters long.", MinimumLength = 12)]
     [DataType(DataType.Password)]
     public string? Password { get; init; }
-    
+
     [Compare("Password", ErrorMessage = "Password and Confirmation Password must match.")]
     [StringLength(255, ErrorMessage = "The password must be between 12 and 255 characters long.", MinimumLength = 12)]
     [DataType(DataType.Password)]

@@ -57,24 +57,24 @@ public class UserHelper
     }
     
     #endregion
-    
+
     #region Generators
-    
+
     public static string GenerateSalt(int length = 64)
     {
         var saltBytes = DataHelper.GenerateRandomBytes(length);
         return Convert.ToBase64String(saltBytes);
     }
-    
+
     public static string GeneratePassword(int length = 12) =>
         DataHelper.GenerateString(length);
-    
+
     public static string GenerateRefreshToken()
     {
         var tokenByte = DataHelper.GenerateRandomBytes();
         return Convert.ToBase64String(tokenByte);
     }
-    
+
     public static string GenerateUsername()
     {
         var random = new Random();

@@ -141,9 +141,7 @@ public class UserManager
         }
 
         if (await _userRepo.UpdateAsync(user))
-        {
             return new OperationResult<User>(user);
-        }
 
         return new OperationResult<User>("Error updating user");
     }
