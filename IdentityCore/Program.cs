@@ -47,10 +47,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddDbContext<IdentityCoreDbContext>(options =>
 {
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString), optionsBuilder =>
-    {
-        optionsBuilder.EnableStringComparisonTranslations();
-    });
+    options.UseNpgsql(connectionString);
 });
 
 builder.Services.AddScoped<UserRepository>();

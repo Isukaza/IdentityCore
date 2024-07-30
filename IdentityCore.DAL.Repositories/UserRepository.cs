@@ -22,16 +22,16 @@ public class UserRepository : DbRepositoryBase<User>
 
     public async Task<User> GetUserByUsernameAsync(string username) =>
         await DbContext.Users
-            .FirstOrDefaultAsync(user => user.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefaultAsync(user => EF.Functions.ILike(user.Username, username));
 
     public async Task<User> GetUserByEmailAsync(string email) =>
         await DbContext.Users
-            .FirstOrDefaultAsync(user => user.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefaultAsync(user => EF.Functions.ILike(user.Email, email));
 
     public async Task<User> GetUserWithTokensByUsernameAsync(string username) =>
         await DbContext.Users
             .Include(rt => rt.RefreshTokens)
-            .FirstOrDefaultAsync(user => user.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefaultAsync(user => EF.Functions.ILike(user.Username, username));
 
     #endregion
 
