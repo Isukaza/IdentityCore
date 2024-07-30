@@ -73,12 +73,12 @@ builder.Services.AddSwaggerGen(options =>
             Title = "Identity Core API",
             Version = Assembly.GetExecutingAssembly().GetName().Version?.ToString()
         });
-    
+
     options.IncludeXmlComments(
         Path.Combine(
             AppContext.BaseDirectory,
             $"{Assembly.GetExecutingAssembly().GetName().Name}.xml"));
-    
+
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description =
@@ -89,7 +89,7 @@ builder.Services.AddSwaggerGen(options =>
         In = ParameterLocation.Header,
         Scheme = "Bearer"
     });
-    
+
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {

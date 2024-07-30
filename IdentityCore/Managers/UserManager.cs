@@ -72,7 +72,7 @@ public class UserManager
         var refreshToken = new RefreshToken
         {
             RefToken = UserHelper.GenerateRefreshToken(),
-            Expires = Rt.Configs.Expires,
+            Expires = DateTime.UtcNow.Add(Rt.Configs.Expires),
             User = user
         };
 
@@ -101,6 +101,12 @@ public class UserManager
         if (userToken is null)
             return new OperationResult<LoginResponse>("Invalid username or refresh toke");
 
+        if (DateTime.UtcNow > userToken.Expires)
+        {
+            _ = _refreshTokenRepo.DeleteAsync(userToken);
+            return new OperationResult<LoginResponse>("Invalid username or refresh toke");
+        }
+        
         var updatedToken = await _refreshTokenManager.RefreshToken(userToken);
         if (string.IsNullOrWhiteSpace(updatedToken))
             return new OperationResult<LoginResponse>("Invalid operation");
@@ -118,17 +124,15 @@ public class UserManager
     {
         if (!string.IsNullOrWhiteSpace(updateRequest.Username))
         {
-            if (await _userRepo.UserExistsByUsernameAsync(user.Username))
-            {
+            if (await _userRepo.UserExistsByUsernameAsync(updateRequest.Username))
                 return new OperationResult<User>("UserName is already taken");
-            }
 
             user.Username = updateRequest.Username;
         }
 
         if (!string.IsNullOrWhiteSpace(updateRequest.Email))
         {
-            if (await _userRepo.UserExistsByEmailAsync(user.Email))
+            if (await _userRepo.UserExistsByEmailAsync(updateRequest.Email))
                 return new OperationResult<User>("Email is already taken");
 
             user.Email = updateRequest.Email;
@@ -141,9 +145,7 @@ public class UserManager
         }
 
         if (await _userRepo.UpdateAsync(user))
-        {
             return new OperationResult<User>(user);
-        }
 
         return new OperationResult<User>("Error updating user");
     }
