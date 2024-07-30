@@ -11,7 +11,7 @@ public class UserCreateRequest : IUser
     public Guid Id { get; init; } = Guid.Empty;
 
     [Required(ErrorMessage = "Username is required")]
-    [StringLength(16, ErrorMessage = "Username must be between 3 and 16 characters long.", MinimumLength = 4)]
+    [StringLength(16, ErrorMessage = "Username must be between 4 and 16 characters long.", MinimumLength = 4)]
     public required string Username { get; init; }
 
     [Required(ErrorMessage = "Email is required")]
