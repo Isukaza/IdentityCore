@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace IdentityCore.DAL.MariaDb.Migrations
+namespace IdentityCore.DAL.PorstgreSQL.Migrations
 {
     /// <inheritdoc />
     public partial class AddRegistrationTokens : Migration
@@ -14,23 +14,20 @@ namespace IdentityCore.DAL.MariaDb.Migrations
             migrationBuilder.AddColumn<bool>(
                 name: "IsActive",
                 table: "Users",
-                type: "tinyint(1)",
+                type: "boolean",
                 nullable: false,
                 defaultValue: false);
-            
-            migrationBuilder.Sql("UPDATE Users SET IsActive = true");
 
             migrationBuilder.CreateTable(
                 name: "RegistrationTokens",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    RegToken = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Expires = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                    UserId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    Created = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                    Modified = table.Column<DateTime>(type: "datetime(6)", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    RegToken = table.Column<string>(type: "text", nullable: false),
+                    Expires = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Modified = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -41,8 +38,7 @@ namespace IdentityCore.DAL.MariaDb.Migrations
                         principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
+                });
 
             migrationBuilder.CreateIndex(
                 name: "IX_RegistrationTokens_UserId",

@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 using IdentityCore.DAL.Models;
 
-namespace IdentityCore.DAL.MariaDb;
+namespace IdentityCore.DAL.PorstgreSQL;
 
 public class IdentityCoreDbContext : DbContext
 {
@@ -39,6 +39,10 @@ public class IdentityCoreDbContext : DbContext
 
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Email)
+            .IsUnique();
+        
+        modelBuilder.Entity<User>()
+            .HasIndex(u => u.Username)
             .IsUnique();
 
         #endregion

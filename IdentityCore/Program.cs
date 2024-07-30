@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
-using IdentityCore.DAL.MariaDb;
+using IdentityCore.DAL.PorstgreSQL;
 using IdentityCore.DAL.Repository;
 using IdentityCore.Managers;
 using Microsoft.OpenApi.Models;
@@ -47,10 +47,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddDbContext<IdentityCoreDbContext>(options =>
 {
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString), optionsBuilder =>
-    {
-        optionsBuilder.EnableStringComparisonTranslations();
-    });
+    options.UseNpgsql(connectionString);
 });
 
 builder.Services.AddScoped<UserRepository>();
@@ -79,12 +76,12 @@ builder.Services.AddSwaggerGen(options =>
             Title = "Identity Core API",
             Version = Assembly.GetExecutingAssembly().GetName().Version?.ToString()
         });
-    
+
     options.IncludeXmlComments(
         Path.Combine(
             AppContext.BaseDirectory,
             $"{Assembly.GetExecutingAssembly().GetName().Name}.xml"));
-    
+
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description =
@@ -95,7 +92,7 @@ builder.Services.AddSwaggerGen(options =>
         In = ParameterLocation.Header,
         Scheme = "Bearer"
     });
-    
+
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {

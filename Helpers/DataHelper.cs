@@ -7,7 +7,7 @@ public static class DataHelper
 {
     private const string Chars =
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789!@#$%^&*()-_";
-    
+
     public static string GetHashFromStrings(params string[] args)
     {
         if (args == null || args.Length == 0)
@@ -20,9 +20,9 @@ public static class DataHelper
                 combinedString.Append(arg);
 
         var hashBytes = SHA512.HashData(Encoding.UTF8.GetBytes(combinedString.ToString()));
-        return hashBytes.ConvertToString();
+        return Convert.ToBase64String(hashBytes);
     }
-    
+
     public static byte[] GenerateRandomBytes(int length = 64)
     {
         if (length < 1)
@@ -39,16 +39,11 @@ public static class DataHelper
         if (length < 1)
             throw new ArgumentOutOfRangeException(nameof(length), "Length must be a positive number.");
 
-        var str = GenerateRandomBytes(length).ConvertToString();
-        
+        var str = new string(GenerateRandomBytes(length).Select(b => Chars[b % Chars.Length]).ToArray());
+
         if (string.IsNullOrEmpty(str))
             throw new InvalidOperationException("Generated string is empty, which indicates a logical error.");
-        
-        return str;
-    }
 
-    private static string ConvertToString(this byte[] bytes)
-    {
-        return new string(bytes.Select(b => Chars[b % Chars.Length]).ToArray());
+        return str;
     }
 }

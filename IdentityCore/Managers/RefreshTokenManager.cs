@@ -17,11 +17,11 @@ public class RefreshTokenManager
     public async Task<string> RefreshToken(RefreshToken token)
     {
         token.RefToken = UserHelper.GenerateRefreshToken();
-        token.Expires = Rt.Configs.Expires;
+        token.Expires = DateTime.UtcNow.Add(Rt.Configs.Expires);
 
         return await _refreshTokenRepo.UpdateAsync(token) ? token.RefToken : string.Empty;
     }
-    
+
     public async Task<bool> AddToken(User user, RefreshToken refreshToken)
     {
         var countTokens = await _refreshTokenRepo.GetCountUserTokens(user.Id);

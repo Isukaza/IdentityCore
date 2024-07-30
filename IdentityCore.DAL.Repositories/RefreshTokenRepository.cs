@@ -1,4 +1,4 @@
-using IdentityCore.DAL.MariaDb;
+using IdentityCore.DAL.PorstgreSQL;
 using IdentityCore.DAL.Models;
 using IdentityCore.DAL.Repository.Base;
 using Microsoft.EntityFrameworkCore;
@@ -13,9 +13,9 @@ public class RefreshTokenRepository : DbRepositoryBase<RefreshToken>
     { }
 
     #endregion
-    
+
     private IQueryable<RefreshToken> GetUserTokens(Guid id) =>
-         DbContext.RefreshTokens.Where(rt => rt.UserId == id);
+        DbContext.RefreshTokens.Where(rt => rt.UserId == id);
 
     public async Task<int> GetCountUserTokens(Guid id) =>
         await DbContext.RefreshTokens.CountAsync(rt => rt.UserId == id);

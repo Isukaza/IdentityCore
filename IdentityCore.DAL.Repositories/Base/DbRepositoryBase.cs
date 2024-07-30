@@ -1,4 +1,4 @@
-using IdentityCore.DAL.MariaDb;
+using IdentityCore.DAL.PorstgreSQL;
 using IdentityCore.DAL.Models.Base;
 
 namespace IdentityCore.DAL.Repository.Base;
@@ -16,7 +16,7 @@ public abstract class DbRepositoryBase<T>
     }
 
     #endregion
-    
+
     #region CRUD
 
     public virtual T Create(T entity)

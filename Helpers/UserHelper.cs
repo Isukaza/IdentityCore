@@ -1,4 +1,3 @@
-using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -34,39 +33,35 @@ public static class UserHelper
     #endregion
 
     #region GetMethods
-    
-    public static string GetPasswordHash(string password, string salt)
-    {
-        return DataHelper.GetHashFromStrings(password, salt);
-    }
+
+    public static string GetPasswordHash(string password, string salt) =>
+        DataHelper.GetHashFromStrings(password, salt);
 
     public static string GetConfirmationRegistrationToken(Guid id)
     {
         var timestamp = DateTime.UtcNow.ToString("o");
-        var data = timestamp + id;
-        var hashData = SHA512.HashData(Encoding.UTF8.GetBytes(data));
-        return Convert.ToBase64String(hashData);
+        return DataHelper.GetHashFromStrings(timestamp, id.ToString());
     }
-    
+
     #endregion
-    
+
     #region Generators
-    
+
     public static string GenerateSalt(int length = 64)
     {
         var saltBytes = DataHelper.GenerateRandomBytes(length);
         return Convert.ToBase64String(saltBytes);
     }
-    
+
     public static string GeneratePassword(int length = 12) =>
         DataHelper.GenerateString(length);
-    
+
     public static string GenerateRefreshToken()
     {
         var tokenByte = DataHelper.GenerateRandomBytes();
         return Convert.ToBase64String(tokenByte);
     }
-    
+
     public static string GenerateUsername()
     {
         var random = new Random();
