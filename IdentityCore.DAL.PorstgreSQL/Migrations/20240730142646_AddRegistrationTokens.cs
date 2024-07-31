@@ -24,6 +24,7 @@ namespace IdentityCore.DAL.PorstgreSQL.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     RegToken = table.Column<string>(type: "text", nullable: false),
+                    AttemptCount = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     Expires = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),

@@ -55,6 +55,9 @@ namespace IdentityCore.DAL.PorstgreSQL.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("Created")
                         .HasColumnType("timestamp with time zone");
 
