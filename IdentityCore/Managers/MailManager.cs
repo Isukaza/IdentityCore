@@ -13,7 +13,7 @@ public class MailManager
         Mail.Configs.AwsAccessKeyId,
         Mail.Configs.AwsSecretAccessKey,
         Mail.Configs.RegionEndpoint);
-    
+
     public async Task<string> SendEmailAsync(
         string fromEmailAddress,
         string toEmailAddress,
@@ -70,13 +70,11 @@ public class MailManager
                 return "Invalid security token.";
             }
         }
-#endif
         catch (Exception ex)
         {
-#if DEBUG
             return $"An error occurred while sending the email: {ex.Message}";
-#endif
         }
+#endif
 
         return "Unknown error";
     }
