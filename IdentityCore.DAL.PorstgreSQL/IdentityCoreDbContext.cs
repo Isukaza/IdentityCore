@@ -61,7 +61,7 @@ public class IdentityCoreDbContext : DbContext
 
         modelBuilder.Entity<RegistrationToken>()
             .HasOne(rt => rt.User)
-            .WithOne(u => u.RegistrationTokens)
+            .WithOne(u => u.RegistrationToken)
             .HasForeignKey<RegistrationToken>(rt => rt.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 

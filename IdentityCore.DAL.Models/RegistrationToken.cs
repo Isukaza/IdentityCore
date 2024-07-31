@@ -8,6 +8,8 @@ public record RegistrationToken : BaseDbEntity
     [Required(ErrorMessage = "RegistrationToken is required")]
     public required string RegToken { get; set; }
     
+    public int AttemptCount { get; set; }
+    
     [Required(ErrorMessage = "Expires is required")]
     public required DateTime Expires { get; set; }
     
