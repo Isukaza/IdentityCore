@@ -36,6 +36,7 @@ public class UserManager
     public async Task<User> CreateUser(UserCreateRequest userCreateRequest)
     {
         var salt = UserHelper.GenerateSalt();
+
         var user = new User
         {
             Id = Guid.NewGuid(),
@@ -44,6 +45,8 @@ public class UserManager
             Salt = salt,
             Password = UserHelper.GetPasswordHash(userCreateRequest.Password, salt)
         };
+
+        user.RegistrationToken = ConfirmationRegistrationManager.CreateConfirmationRegistrationToken(user);
 
         return await _userRepo.CreateAsync(user);
     }
@@ -106,7 +109,7 @@ public class UserManager
             _ = _refreshTokenRepo.DeleteAsync(userToken);
             return new OperationResult<LoginResponse>("Invalid username or refresh toke");
         }
-        
+
         var updatedToken = await _refreshTokenManager.RefreshToken(userToken);
         if (string.IsNullOrWhiteSpace(updatedToken))
             return new OperationResult<LoginResponse>("Invalid operation");
@@ -158,6 +161,21 @@ public class UserManager
         return await _userRepo.DeleteAsync(user);
     }
 
+    public async Task<string> Logout(string username, string refreshToken)
+    {
+        var user = await _userRepo.GetUserWithTokensByUsernameAsync(username);
+        if (user is null || user.RefreshTokens.Count == 0)
+            return "The user was not found or was deleted";
+
+        var userToken = user.RefreshTokens.FirstOrDefault(rt => rt.RefToken == refreshToken);
+        if (userToken is not null)
+            return await _refreshTokenRepo.DeleteAsync(userToken)
+                ? string.Empty
+                : "Error during deletion";
+
+        return string.Empty;
+    }
+
     public async Task<OperationResult<User>> ValidateLogin(UserLoginRequest loginRequest)
     {
         if (string.IsNullOrWhiteSpace(loginRequest.Email) || string.IsNullOrWhiteSpace(loginRequest.Password))
@@ -192,19 +210,13 @@ public class UserManager
         return string.Empty;
     }
 
-    public async Task<string> Logout(string username, string refreshToken)
+    public async Task<OperationResult<User>> ValidateResendConfirmationMail(ResendConfirmationEmailRequest emailRequest)
     {
-        var user = await _userRepo.GetUserWithTokensByUsernameAsync(username);
-        if (user is null || user.RefreshTokens.Count == 0)
-            return "The user was not found or was deleted";
+        if (string.IsNullOrWhiteSpace(emailRequest.Email))
+            return new OperationResult<User>("Invalid input data");
 
-        var userToken = user.RefreshTokens.FirstOrDefault(rt => rt.RefToken == refreshToken);
-        if (userToken is not null)
-            return await _refreshTokenRepo.DeleteAsync(userToken)
-                ? string.Empty
-                : "Error during deletion";
-
-        return string.Empty;
+        var user = await _userRepo.GetPendingActivationUserAsync(emailRequest.UserId, emailRequest.Email);
+        return user == null ? new OperationResult<User>("Invalid input data") : new OperationResult<User>(user);
     }
 
     #region TestMetods

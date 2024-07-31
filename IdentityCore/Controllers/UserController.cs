@@ -1,6 +1,8 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 
 using Helpers;
+using IdentityCore.Configuration;
 using IdentityCore.DAL.Repository;
 using IdentityCore.Managers;
 using IdentityCore.Models;
@@ -17,17 +19,25 @@ public class UserController : Controller
 
     private readonly UserRepository _userRepo;
     private readonly UserManager _userManager;
+    private readonly MailManager _mailManager;
+    private readonly ConfirmationRegistrationManager _crManager;
 
-    public UserController(UserRepository userRepository, UserManager userManager)
+    public UserController(
+        UserRepository userRepository,
+        UserManager userManager,
+        MailManager mailManager,
+        ConfirmationRegistrationManager crManager)
     {
         _userRepo = userRepository;
         _userManager = userManager;
+        _mailManager = mailManager;
+        _crManager = crManager;
     }
 
     #endregion
 
     #region CRUD
-    
+
     [HttpGet("{useId:guid}")]
     [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetUser(Guid useId)
@@ -41,7 +51,7 @@ public class UserController : Controller
             ? await StatusCodes.Status200OK.ResultState("User info", user.ToUserResponse())
             : await StatusCodes.Status404NotFound.ResultState($"User by id:{useId} not found");
     }
-    
+
     [HttpPost("registration")]
     [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
     public async Task<IActionResult> RegistrationUser([FromBody] UserCreateRequest userCreateRequest)
@@ -49,11 +59,25 @@ public class UserController : Controller
         var errorMessage = await _userManager.ValidateRegistration(userCreateRequest);
         if (!string.IsNullOrEmpty(errorMessage))
             return await StatusCodes.Status400BadRequest.ResultState(errorMessage);
-        
+
         var userResponse = await _userManager.CreateUser(userCreateRequest);
-        return userResponse is null
-            ? await StatusCodes.Status500InternalServerError.ResultState("Error creating user")
-            : await StatusCodes.Status201Created.ResultState("User created", userResponse.Id);
+
+        if (userResponse is null || userResponse.RegistrationToken is null)
+            return await StatusCodes.Status500InternalServerError.ResultState("Error creating user");
+
+        var confirmationLink = Mail.Const.GetConfirmationLink(userResponse.RegistrationToken.RegToken);
+
+        var sendMailError = await _mailManager.SendEmailAsync(
+            Mail.Configs.Mail,
+            userResponse.Email,
+            Mail.Const.Subject,
+            Mail.Const.GetHtmlContent(userResponse.Username, confirmationLink));
+
+        await _crManager.DeleteExpiredTokens();
+
+        return string.IsNullOrEmpty(sendMailError)
+            ? await StatusCodes.Status201Created.ResultState(userResponse.Id.ToString())
+            : await StatusCodes.Status400BadRequest.ResultState("Not send mail");
     }
 
     [HttpPut("update")]
@@ -95,6 +119,60 @@ public class UserController : Controller
         return await _userManager.DeleteUserAsync(user)
             ? await StatusCodes.Status200OK.ResultState("User deleted")
             : await StatusCodes.Status500InternalServerError.ResultState("Error when deleting user");
+    }
+
+    #endregion
+
+    #region Confirmation registration
+
+    [HttpGet("confirmation-registration")]
+    public async Task<IActionResult> ConfirmationRegistrationUser([Required] string token)
+    {
+        if (!ConfirmationRegistrationManager.IsTokenValid(token))
+            return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
+
+        await _crManager.DeleteExpiredTokens();
+        var userActivationError = await _crManager.ActivatedUser(token);
+
+        return string.IsNullOrEmpty(userActivationError)
+            ? await StatusCodes.Status200OK.ResultState()
+            : await StatusCodes.Status400BadRequest.ResultState(userActivationError);
+    }
+
+    [HttpPost("resend-reg-token")]
+    public async Task<IActionResult> ResendConfirmationRegistrationUser(
+        [FromBody] ResendConfirmationEmailRequest emailRequest)
+    {
+        var result = await _userManager.ValidateResendConfirmationMail(emailRequest);
+        if (!result.Success)
+            return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
+
+        if (result.Data.RegistrationToken is null)
+        {
+            _ = await _userManager.DeleteUserAsync(result.Data);
+            return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
+        }
+
+        var nextAttemptToResend = ConfirmationRegistrationManager
+            .GetNextAttemptAvailabilityTime(result.Data.RegistrationToken);
+        if (!string.IsNullOrEmpty(nextAttemptToResend))
+            return await StatusCodes.Status429TooManyRequests.ResultState(nextAttemptToResend);
+
+        var token = await _crManager.UpdateRegistrationToken(result.Data.RegistrationToken, result.Data.Id);
+        if (token is null)
+            return await StatusCodes.Status500InternalServerError
+                .ResultState("Failed to send verification token");
+
+        var confirmationLink = Mail.Const.GetConfirmationLink(token.RegToken);
+        var sendMailError = await _mailManager.SendEmailAsync(
+            Mail.Configs.Mail,
+            result.Data.Email,
+            Mail.Const.Subject,
+            Mail.Const.GetHtmlContent(result.Data.Username, confirmationLink));
+
+        return string.IsNullOrEmpty(sendMailError)
+            ? await StatusCodes.Status200OK.ResultState()
+            : await StatusCodes.Status400BadRequest.ResultState("Not send mail");
     }
 
     #endregion

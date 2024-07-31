@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace IdentityCore.DAL.MariaDb.Migrations
+namespace IdentityCore.DAL.PorstgreSQL.Migrations
 {
     /// <inheritdoc />
     public partial class Initial : Migration

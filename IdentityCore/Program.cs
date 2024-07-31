@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
-using IdentityCore.DAL.MariaDb;
+using IdentityCore.DAL.PorstgreSQL;
 using IdentityCore.DAL.Repository;
 using IdentityCore.Managers;
 using Microsoft.OpenApi.Models;
@@ -52,9 +52,12 @@ builder.Services.AddDbContext<IdentityCoreDbContext>(options =>
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<RefreshTokenRepository>();
+builder.Services.AddScoped<ConfirmationRegistrationRepository>();
 
 builder.Services.AddScoped<UserManager>();
 builder.Services.AddScoped<RefreshTokenManager>();
+builder.Services.AddScoped<ConfirmationRegistrationManager>();
+builder.Services.AddScoped<MailManager>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>

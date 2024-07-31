@@ -6,7 +6,7 @@ namespace IdentityCore.Models;
 public static class ModelHelper
 {
     #region Users
-    
+
     public static UserResponse ToUserResponse(this User user) =>
         new()
         {

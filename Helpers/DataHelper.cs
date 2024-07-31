@@ -8,7 +8,7 @@ public static class DataHelper
     private const string Chars =
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789!@#$%^&*()-_";
 
-    public static string GetHashStrings(params string[] args)
+    public static string GetHashFromStrings(params string[] args)
     {
         if (args == null || args.Length == 0)
             throw new ArgumentException("At least one string argument is required.", nameof(args));

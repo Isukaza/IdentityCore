@@ -4,14 +4,12 @@ namespace Helpers.ValidationAttributes;
 
 public class NotEmptyGuidAttribute(string errorMessage) : ValidationAttribute
 {
-    private string ErrorMessage { get; set; } = errorMessage;
+    private new string ErrorMessage { get; set; } = errorMessage;
 
-    protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+    protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
     {
         if (value is Guid guidValue && guidValue == Guid.Empty)
-        {
             return new ValidationResult(ErrorMessage);
-        }
 
         return ValidationResult.Success;
     }

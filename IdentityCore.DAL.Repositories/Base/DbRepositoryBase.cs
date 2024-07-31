@@ -1,4 +1,4 @@
-using IdentityCore.DAL.MariaDb;
+using IdentityCore.DAL.PorstgreSQL;
 using IdentityCore.DAL.Models.Base;
 
 namespace IdentityCore.DAL.Repository.Base;

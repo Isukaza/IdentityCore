@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 using IdentityCore.DAL.Models;
 
-namespace IdentityCore.DAL.MariaDb;
+namespace IdentityCore.DAL.PorstgreSQL;
 
 public class IdentityCoreDbContext : DbContext
 {
@@ -29,6 +29,7 @@ public class IdentityCoreDbContext : DbContext
 
     public virtual DbSet<User> Users { get; set; }
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
+    public virtual DbSet<RegistrationToken> RegistrationTokens { get; set; }
 
     #endregion
     
@@ -51,7 +52,18 @@ public class IdentityCoreDbContext : DbContext
         modelBuilder.Entity<RefreshToken>()
             .HasOne(rt => rt.User)
             .WithMany(u => u.RefreshTokens)
-            .HasForeignKey(rt => rt.UserId);
+            .HasForeignKey(rt => rt.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        #endregion
+        
+        #region Users + RegistrationTokens
+
+        modelBuilder.Entity<RegistrationToken>()
+            .HasOne(rt => rt.User)
+            .WithOne(u => u.RegistrationToken)
+            .HasForeignKey<RegistrationToken>(rt => rt.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         #endregion
     }

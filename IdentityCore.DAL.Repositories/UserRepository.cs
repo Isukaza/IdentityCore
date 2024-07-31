@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
-using IdentityCore.DAL.MariaDb;
+using IdentityCore.DAL.PorstgreSQL;
 using IdentityCore.DAL.Models;
 using IdentityCore.DAL.Repository.Base;
 
@@ -27,6 +27,13 @@ public class UserRepository : DbRepositoryBase<User>
     public async Task<User> GetUserByEmailAsync(string email) =>
         await DbContext.Users
             .FirstOrDefaultAsync(user => EF.Functions.ILike(user.Email, email));
+    
+    public async Task<User> GetPendingActivationUserAsync(Guid id, string email) =>
+        await DbContext.Users
+            .Include(rct => rct.RegistrationToken)
+            .FirstOrDefaultAsync(user => EF.Functions.ILike(user.Email, email)
+                                         && user.Id == id
+                                         && !user.IsActive);
 
     public async Task<User> GetUserWithTokensByUsernameAsync(string username) =>
         await DbContext.Users

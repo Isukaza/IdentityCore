@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Helpers;
 
-public class UserHelper
+public static class UserHelper
 {
     #region Fields
 
@@ -35,7 +35,13 @@ public class UserHelper
     #region GetMethods
 
     public static string GetPasswordHash(string password, string salt) =>
-        DataHelper.GetHashStrings(password, salt);
+        DataHelper.GetHashFromStrings(password, salt);
+
+    public static string GetConfirmationRegistrationToken(Guid id)
+    {
+        var timestamp = DateTime.UtcNow.ToString("o");
+        return DataHelper.GetHashFromStrings(timestamp, id.ToString());
+    }
 
     #endregion
 
