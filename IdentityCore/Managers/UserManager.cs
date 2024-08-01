@@ -72,18 +72,13 @@ public class UserManager
 
     public async Task<OperationResult<LoginResponse>> CreateLoginTokens(User user)
     {
-        var refreshToken = new RefreshToken
-        {
-            RefToken = UserHelper.GenerateRefreshToken(),
-            Expires = DateTime.UtcNow.Add(Rt.Configs.Expires),
-            User = user
-        };
-
+        var refreshToken = RefreshTokenManager.CreateRefreshToken(user);
         if (!await _refreshTokenManager.AddToken(user, refreshToken))
             return new OperationResult<LoginResponse>("Error creating session");
 
         var loginResponse = new LoginResponse
         {
+            UserId = user.Id,
             Bearer = CreateJwt(user),
             RefreshToken = refreshToken.RefToken
         };
@@ -91,32 +86,16 @@ public class UserManager
         return new OperationResult<LoginResponse>(loginResponse);
     }
 
-    public async Task<OperationResult<LoginResponse>> RefreshLoginTokens(string username, string refreshToken)
+    public async Task<OperationResult<LoginResponse>> RefreshLoginTokens(RefreshToken token)
     {
-        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(refreshToken))
-            return new OperationResult<LoginResponse>("Invalid username or refresh toke");
-
-        var user = await _userRepo.GetUserWithTokensByUsernameAsync(username);
-        if (user is null || user.RefreshTokens.Count == 0)
-            return new OperationResult<LoginResponse>("Invalid username or refresh toke");
-
-        var userToken = user.RefreshTokens.FirstOrDefault(rt => rt.RefToken == refreshToken);
-        if (userToken is null)
-            return new OperationResult<LoginResponse>("Invalid username or refresh toke");
-
-        if (DateTime.UtcNow > userToken.Expires)
-        {
-            _ = _refreshTokenRepo.DeleteAsync(userToken);
-            return new OperationResult<LoginResponse>("Invalid username or refresh toke");
-        }
-
-        var updatedToken = await _refreshTokenManager.RefreshToken(userToken);
+        var updatedToken = await _refreshTokenManager.UpdateTokenDb(token);
         if (string.IsNullOrWhiteSpace(updatedToken))
             return new OperationResult<LoginResponse>("Invalid operation");
 
         var loginResponse = new LoginResponse
         {
-            Bearer = CreateJwt(user),
+            UserId = token.UserId,
+            Bearer = CreateJwt(token.User),
             RefreshToken = updatedToken
         };
 
@@ -161,20 +140,18 @@ public class UserManager
         return await _userRepo.DeleteAsync(user);
     }
 
-    public async Task<string> Logout(string username, string refreshToken)
+    public async Task<string> Logout(Guid userId, string refreshToken)
     {
-        var user = await _userRepo.GetUserWithTokensByUsernameAsync(username);
-        if (user is null || user.RefreshTokens.Count == 0)
+        var token = await _refreshTokenRepo.GetTokenByUserIdAsync(userId, refreshToken);
+        if (token is null)
             return "The user was not found or was deleted";
 
-        var userToken = user.RefreshTokens.FirstOrDefault(rt => rt.RefToken == refreshToken);
-        if (userToken is not null)
-            return await _refreshTokenRepo.DeleteAsync(userToken)
-                ? string.Empty
-                : "Error during deletion";
-
-        return string.Empty;
+        return await _refreshTokenRepo.DeleteAsync(token)
+            ? string.Empty
+            : "Error during deletion";
     }
+
+    #region Validation
 
     public async Task<OperationResult<User>> ValidateLogin(UserLoginRequest loginRequest)
     {
@@ -216,8 +193,12 @@ public class UserManager
             return new OperationResult<User>("Invalid input data");
 
         var user = await _userRepo.GetPendingActivationUserAsync(emailRequest.UserId, emailRequest.Email);
-        return user == null ? new OperationResult<User>("Invalid input data") : new OperationResult<User>(user);
+        return user == null
+            ? new OperationResult<User>("Invalid input data")
+            : new OperationResult<User>(user);
     }
+
+    #endregion
 
     #region TestMetods
 

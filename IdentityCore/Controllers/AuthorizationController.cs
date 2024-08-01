@@ -1,5 +1,4 @@
-﻿using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 using Helpers;
@@ -16,10 +15,12 @@ public class AuthorizationController : ControllerBase
     #region C-tor and fields
 
     private readonly UserManager _userManager;
+    private readonly RefreshTokenManager _refreshTokenManager;
 
-    public AuthorizationController(UserManager userManager)
+    public AuthorizationController(UserManager userManager, RefreshTokenManager refreshTokenManager)
     {
         _userManager = userManager;
+        _refreshTokenManager = refreshTokenManager;
     }
 
     #endregion
@@ -31,10 +32,10 @@ public class AuthorizationController : ControllerBase
     /// <returns>JWT token and Refresh token.</returns>
     /// <response code="200">Successful login.</response>
     /// <response code="400">Email or password is invalid.</response>
-    /// <response code="401">Unauthorized.</response>
     [HttpPost("login")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Login([FromBody] UserLoginRequest loginRequest)
     {
         var result = await _userManager.ValidateLogin(loginRequest);
@@ -53,13 +54,19 @@ public class AuthorizationController : ControllerBase
     /// <param name="refreshTokenRequest">JSON with data fields to update the access token.</param>
     /// <returns>JWT Access token and Refresh token.</returns>
     /// <response code="200">Successful refresh.</response>
+    /// <response code="400">Invalid input data.</response>
     [HttpPost("refresh")]
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest refreshTokenRequest)
     {
-        var loginResponse = await _userManager
-            .RefreshLoginTokens(refreshTokenRequest.Username, refreshTokenRequest.RefreshToken);
+        var result = await _refreshTokenManager
+            .ValidationRefreshToken(refreshTokenRequest.UserId, refreshTokenRequest.RefreshToken);
 
+        if (!result.Success)
+            return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
+
+        var loginResponse = await _userManager.RefreshLoginTokens(result.Data);
         return loginResponse.Success
             ? await StatusCodes.Status200OK.ResultState("Successful login refresh", loginResponse.Data)
             : await StatusCodes.Status400BadRequest.ResultState(loginResponse.ErrorMessage);
@@ -77,13 +84,7 @@ public class AuthorizationController : ControllerBase
     [Authorize]
     public async Task<IActionResult> Logout([FromBody] LogoutRequest logoutRequest)
     {
-        var username = HttpContext.User.Claims
-            .FirstOrDefault(claim => claim.Type == ClaimTypes.Name)?.Value ?? string.Empty;
-
-        if (string.IsNullOrWhiteSpace(username))
-            return await StatusCodes.Status400BadRequest.ResultState("Invalid jwt");
-
-        var errorMessage = await _userManager.Logout(username, logoutRequest.RefreshToken);
+        var errorMessage = await _userManager.Logout(logoutRequest.UserId, logoutRequest.RefreshToken);
         return string.IsNullOrEmpty(errorMessage)
             ? await StatusCodes.Status200OK.ResultState()
             : await StatusCodes.Status400BadRequest.ResultState(errorMessage);

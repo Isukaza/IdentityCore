@@ -37,7 +37,7 @@ public static class UserHelper
     public static string GetPasswordHash(string password, string salt) =>
         DataHelper.GetHashFromStrings(password, salt);
 
-    public static string GetConfirmationRegistrationToken(Guid id)
+    public static string GetToken(Guid id)
     {
         var timestamp = DateTime.UtcNow.ToString("o");
         return DataHelper.GetHashFromStrings(timestamp, id.ToString());
@@ -55,12 +55,6 @@ public static class UserHelper
 
     public static string GeneratePassword(int length = 12) =>
         DataHelper.GenerateString(length);
-
-    public static string GenerateRefreshToken()
-    {
-        var tokenByte = DataHelper.GenerateRandomBytes();
-        return Convert.ToBase64String(tokenByte);
-    }
 
     public static string GenerateUsername()
     {

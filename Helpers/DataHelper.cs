@@ -8,20 +8,25 @@ public static class DataHelper
     private const string Chars =
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789!@#$%^&*()-_";
 
+    #region GET
+
     public static string GetHashFromStrings(params string[] args)
     {
         if (args == null || args.Length == 0)
             throw new ArgumentException("At least one string argument is required.", nameof(args));
 
-        var combinedString = new StringBuilder();
+        var combinedString = string.Join("", args.Where(arg => !string.IsNullOrWhiteSpace(arg)));
 
-        foreach (var arg in args)
-            if (!string.IsNullOrWhiteSpace(arg))
-                combinedString.Append(arg);
+        if (string.IsNullOrEmpty(combinedString))
+            throw new ArgumentException("All provided strings are empty or whitespace.", nameof(args));
 
-        var hashBytes = SHA512.HashData(Encoding.UTF8.GetBytes(combinedString.ToString()));
+        var hashBytes = SHA512.HashData(Encoding.UTF8.GetBytes(combinedString));
         return Convert.ToBase64String(hashBytes);
     }
+
+    #endregion
+
+    #region Generators
 
     public static byte[] GenerateRandomBytes(int length = 64)
     {
@@ -46,4 +51,6 @@ public static class DataHelper
 
         return str;
     }
+
+    #endregion
 }

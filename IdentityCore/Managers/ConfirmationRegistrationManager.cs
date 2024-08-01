@@ -9,9 +9,7 @@ namespace IdentityCore.Managers;
 public class ConfirmationRegistrationManager
 {
     #region C-tor and fields
-
-    private const int Sha512ByteSize = 64;
-
+    
     private readonly UserRepository _userRepo;
     private readonly ConfirmationRegistrationRepository _crRepo;
 
@@ -38,20 +36,10 @@ public class ConfirmationRegistrationManager
         return nextAvailableTime.ToString("yyyy-MM-ddTHH:mm:ssZ");
     }
 
-    public static bool IsTokenValid(string token)
-    {
-        var bufferSize = (int)Math.Ceiling(token.Length * 3.0 / 4.0);
-        var buffer = new Span<byte>(new byte[bufferSize]);
-        if (Convert.TryFromBase64String(token, buffer, out var bytes))
-            return bytes == Sha512ByteSize;
-
-        return false;
-    }
-
     public static RegistrationToken CreateConfirmationRegistrationToken(User user) =>
         new()
         {
-            RegToken = UserHelper.GetConfirmationRegistrationToken(user.Id),
+            RegToken = UserHelper.GetToken(user.Id),
             Expires = DateTime.UtcNow.Add(TimeSpan.FromHours(1)),
             AttemptCount = 1
         };
@@ -77,7 +65,7 @@ public class ConfirmationRegistrationManager
         if (token == null)
             return null;
 
-        token.RegToken = UserHelper.GetConfirmationRegistrationToken(userId);
+        token.RegToken = UserHelper.GetToken(userId);
 
         if (DateTime.UtcNow - token.Modified >= Mail.Configs.NextAttemptAvailableAfter)
             token.AttemptCount = 0;
