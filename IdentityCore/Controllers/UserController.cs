@@ -42,9 +42,6 @@ public class UserController : Controller
     [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetUser(Guid useId)
     {
-        if (useId == Guid.Empty)
-            return await StatusCodes.Status400BadRequest.ResultState("Incorrect guid");
-
         var user = await _userRepo.GetUserByIdAsync(useId);
 
         return user != null
@@ -128,9 +125,6 @@ public class UserController : Controller
     [HttpGet("confirmation-registration")]
     public async Task<IActionResult> ConfirmationRegistrationUser([Required] string token)
     {
-        if (!ConfirmationRegistrationManager.IsTokenValid(token))
-            return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
-
         await _crManager.DeleteExpiredTokens();
         var userActivationError = await _crManager.ActivatedUser(token);
 
@@ -226,7 +220,7 @@ public class UserController : Controller
 
     [HttpGet("gen-users")]
     [ProducesResponseType(typeof(List<TestUserResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetPasswordHash(int count)
+    public async Task<IActionResult> GenerateUser(int count)
     {
         if (count < 1 || count > 1000)
             return await StatusCodes.Status400BadRequest
@@ -239,7 +233,7 @@ public class UserController : Controller
 
     [HttpPost("generate-test-database")]
     [ProducesResponseType(typeof(List<TestUserResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetPasswordHash(int count, string password)
+    public async Task<IActionResult> GenerateTestDB(int count, string password)
     {
         if (count < 1 || count > 1000)
             return await StatusCodes.Status400BadRequest

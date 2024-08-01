@@ -1,6 +1,6 @@
 namespace IdentityCore.Configuration;
 
-public static class Rt
+public static class RefToken
 {
     private static class Keys
     {
@@ -16,21 +16,13 @@ public static class Rt
 
         static Configs()
         {
-            var configuration = GetConfiguration();
+            var configuration = ConfigBase.GetConfiguration();
             Expires = TimeSpan.FromDays(int.TryParse(configuration[Keys.ExpiresKey], out var expires)
                 ? expires
                 : 7);
             MaxSessions = int.TryParse(configuration[Keys.MaxSessionsKey], out var maxSessions)
                 ? maxSessions
                 : 5;
-        }
-
-        private static IConfigurationRoot GetConfiguration()
-        {
-            return new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                .Build();
         }
     }
 }

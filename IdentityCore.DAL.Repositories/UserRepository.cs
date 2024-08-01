@@ -35,11 +35,6 @@ public class UserRepository : DbRepositoryBase<User>
                                          && user.Id == id
                                          && !user.IsActive);
 
-    public async Task<User> GetUserWithTokensByUsernameAsync(string username) =>
-        await DbContext.Users
-            .Include(rt => rt.RefreshTokens)
-            .FirstOrDefaultAsync(user => EF.Functions.ILike(user.Username, username));
-
     #endregion
 
     #region Check
