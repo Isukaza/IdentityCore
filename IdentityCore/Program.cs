@@ -1,15 +1,18 @@
 using System.Reflection;
 using System.Text.Json.Serialization;
-using IdentityCore.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 
 using IdentityCore.DAL.PorstgreSQL;
 using IdentityCore.DAL.Repository;
+using IdentityCore.DAL.Repository.Base;
+using IdentityCore.Configuration;
 using IdentityCore.Managers;
-using Microsoft.OpenApi.Models;
+
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,12 +49,25 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddDbContext<IdentityCoreDbContext>(options =>
 {
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    var connectionString = builder.Configuration.GetConnectionString("PostgreSQLConnection");
     options.UseNpgsql(connectionString);
+});
+
+builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
+{
+    var redisConnectionUrl = builder.Configuration.GetConnectionString("RedisConnectionUrl");
+    Console.WriteLine(redisConnectionUrl);
+    if (string.IsNullOrEmpty(redisConnectionUrl))
+    {
+        throw new InvalidOperationException("RedisConnectionUrl is not configured.");
+    }
+    
+    return ConnectionMultiplexer.Connect(redisConnectionUrl);
 });
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<RefreshTokenRepository>();
+builder.Services.AddScoped<CacheRepositoryBase>();
 builder.Services.AddScoped<ConfirmationRegistrationRepository>();
 
 builder.Services.AddScoped<UserManager>();

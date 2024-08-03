@@ -8,8 +8,9 @@ namespace IdentityCore.DAL.Repository;
 public class ConfirmationRegistrationRepository : DbRepositoryBase<RegistrationToken>
 {
     #region C-tor
-
-    public ConfirmationRegistrationRepository(IdentityCoreDbContext dbContext) : base(dbContext)
+    
+    public ConfirmationRegistrationRepository(IdentityCoreDbContext dbContext)
+        : base(dbContext)
     { }
 
     #endregion
