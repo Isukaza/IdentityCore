@@ -4,7 +4,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdentityCore", "IdentityCor
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Helpers", "Helpers\Helpers.csproj", "{6D1ABC6A-2454-4A3A-925D-AF9418496E02}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdentityCore.DAL.PorstgreSQL", "IdentityCore.DAL.PorstgreSQL\IdentityCore.DAL.PorstgreSQL.csproj", "{974729CE-CC94-4D7C-9213-755AE212030C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdentityCore.DAL.PostgreSQL", "IdentityCore.DAL.PostgreSQL\IdentityCore.DAL.PostgreSQL.csproj", "{974729CE-CC94-4D7C-9213-755AE212030C}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DAL", "DAL", "{3EFC65D2-F483-4968-9B1A-FEF9D38B689E}"
 EndProject

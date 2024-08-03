@@ -8,7 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\IdentityCore.DAL.PorstgreSQL\IdentityCore.DAL.PorstgreSQL.csproj" />
+      <ProjectReference Include="..\IdentityCore.DAL.PostgreSQL\IdentityCore.DAL.PostgreSQL.csproj" />
     </ItemGroup>
 
 </Project>
