@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 
 using Helpers;
 using IdentityCore.Configuration;
+using IdentityCore.DAL.Models;
 using IdentityCore.DAL.Repository;
 using IdentityCore.Managers;
 using IdentityCore.Models;
@@ -20,18 +21,18 @@ public class UserController : Controller
     private readonly UserRepository _userRepo;
     private readonly UserManager _userManager;
     private readonly MailManager _mailManager;
-    private readonly ConfirmationRegistrationManager _crManager;
+    private readonly ConfirmationTokenManager _ctManager;
 
     public UserController(
         UserRepository userRepository,
         UserManager userManager,
         MailManager mailManager,
-        ConfirmationRegistrationManager crManager)
+        ConfirmationTokenManager ctManager)
     {
         _userRepo = userRepository;
         _userManager = userManager;
         _mailManager = mailManager;
-        _crManager = crManager;
+        _ctManager = ctManager;
     }
 
     #endregion
@@ -57,23 +58,27 @@ public class UserController : Controller
         if (!string.IsNullOrEmpty(errorMessage))
             return await StatusCodes.Status400BadRequest.ResultState(errorMessage);
 
-        var userResponse = await _userManager.CreateUser(userCreateRequest);
-
-        if (userResponse is null || userResponse.RegistrationToken is null)
+        var user = _userManager.CreateUserForRegistration(userCreateRequest);
+        if (user is null)
             return await StatusCodes.Status500InternalServerError.ResultState("Error creating user");
 
-        var confirmationLink = Mail.Const.GetConfirmationLink(userResponse.RegistrationToken.RegToken);
+        var registrationToken = _ctManager.CreateConfirmationToken(user, TokenType.RegistrationConfirmation);
+        if (registrationToken is null)
+        {
+            _ = await _userManager.DeleteUserFromRedisAsync(user);
+            return await StatusCodes.Status500InternalServerError.ResultState("Error creating user");
+        }
 
+        var confirmationLink = Mail.GetConfirmationLink(registrationToken.Value, registrationToken.TokenType);
         var sendMailError = await _mailManager.SendEmailAsync(
             Mail.Configs.Mail,
-            userResponse.Email,
-            Mail.Const.Subject,
-            Mail.Const.GetHtmlContent(userResponse.Username, confirmationLink));
-
-        await _crManager.DeleteExpiredTokens();
+            user.Email,
+            registrationToken.TokenType,
+            user.Username,
+            confirmationLink);
 
         return string.IsNullOrEmpty(sendMailError)
-            ? await StatusCodes.Status201Created.ResultState(userResponse.Id.ToString())
+            ? await StatusCodes.Status201Created.ResultState(user.Id.ToString())
             : await StatusCodes.Status400BadRequest.ResultState("Not send mail");
     }
 
@@ -122,50 +127,57 @@ public class UserController : Controller
 
     #region Confirmation registration
 
-    [HttpGet("confirmation-registration")]
-    public async Task<IActionResult> ConfirmationRegistrationUser([Required] string token)
+    [HttpGet("confirmation-action")]
+    public async Task<IActionResult> ConfirmationRegistration([Required] string token, [Required] TokenType tokenType)
     {
-        await _crManager.DeleteExpiredTokens();
-        var userActivationError = await _crManager.ActivatedUser(token);
+        var tokenDb = await _ctManager.GetTokenAsync(token, tokenType);
+        if (tokenDb is null)
+            return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
 
+        var user = await _userRepo.GetUserFromRedisByIdAsync(tokenDb.UserId);
+        if (user is null)
+        {
+            _ = await _ctManager.DeleteToken(tokenDb);
+            return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
+        }
+
+        var userActivationError = await _userManager.ActivatedUser(user, tokenDb);
         return string.IsNullOrEmpty(userActivationError)
-            ? await StatusCodes.Status200OK.ResultState()
-            : await StatusCodes.Status400BadRequest.ResultState(userActivationError);
+            ? await StatusCodes.Status200OK.ResultState("Operation was successfully completed")
+            : await StatusCodes.Status500InternalServerError.ResultState(userActivationError);
     }
 
     [HttpPost("resend-reg-token")]
     public async Task<IActionResult> ResendConfirmationRegistrationUser(
         [FromBody] ResendConfirmationEmailRequest emailRequest)
     {
-        var result = await _userManager.ValidateResendConfirmationMail(emailRequest);
+        var result = await _ctManager.ValidateResendConfirmationRegistrationMail(emailRequest);
         if (!result.Success)
             return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
 
-        if (result.Data.RegistrationToken is null)
-        {
-            _ = await _userManager.DeleteUserAsync(result.Data);
+        var user = await _userRepo.GetUserFromRedisByIdAsync(result.Data.UserId);
+        if (user is null)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
-        }
 
-        var nextAttemptToResend = ConfirmationRegistrationManager
-            .GetNextAttemptAvailabilityTime(result.Data.RegistrationToken);
-        if (!string.IsNullOrEmpty(nextAttemptToResend))
-            return await StatusCodes.Status429TooManyRequests.ResultState(nextAttemptToResend);
+        var timeForNextAttempt = ConfirmationTokenManager.GetNextAttemptTime(result.Data);
+        if (!string.IsNullOrEmpty(timeForNextAttempt))
+            return await StatusCodes.Status429TooManyRequests.ResultState(timeForNextAttempt);
 
-        var token = await _crManager.UpdateRegistrationToken(result.Data.RegistrationToken, result.Data.Id);
-        if (token is null)
+        var updatedToken = await _ctManager.UpdateRegistrationToken(result.Data, result.Data.UserId);
+        if (updatedToken is null)
             return await StatusCodes.Status500InternalServerError
                 .ResultState("Failed to send verification token");
 
-        var confirmationLink = Mail.Const.GetConfirmationLink(token.RegToken);
+        var confirmationLink = Mail.GetConfirmationLink(updatedToken.Value, TokenType.RegistrationConfirmation);
         var sendMailError = await _mailManager.SendEmailAsync(
             Mail.Configs.Mail,
-            result.Data.Email,
-            Mail.Const.Subject,
-            Mail.Const.GetHtmlContent(result.Data.Username, confirmationLink));
+            user.Email,
+            updatedToken.TokenType,
+            user.Username,
+            confirmationLink);
 
         return string.IsNullOrEmpty(sendMailError)
-            ? await StatusCodes.Status200OK.ResultState()
+            ? await StatusCodes.Status200OK.ResultState("Operation was successfully completed")
             : await StatusCodes.Status400BadRequest.ResultState("Not send mail");
     }
 
@@ -233,7 +245,7 @@ public class UserController : Controller
 
     [HttpPost("generate-test-database")]
     [ProducesResponseType(typeof(List<TestUserResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GenerateTestDB(int count, string password)
+    public async Task<IActionResult> GenerateTestDb(int count, string password)
     {
         if (count < 1 || count > 1000)
             return await StatusCodes.Status400BadRequest

@@ -11,22 +11,32 @@ public class CacheRepositoryBase
     {
         _cache = multiplexer.GetDatabase();
     }
-    
-    public T Get<T>(string key)
+
+    public bool Add<T>(string key, T value, TimeSpan ttl)
     {
-        var value = _cache.StringGet(key);
-        return string.IsNullOrEmpty(value) ? default : JsonSerializer.Deserialize<T>(value);
-    }
-    
-    public bool Add<T>(string key, T value, DateTimeOffset expirationTime)
-    {
-        var expiryTime = expirationTime.DateTime.Subtract(DateTime.Now);
         var json = JsonSerializer.Serialize(value);
-        return _cache.StringSet(key, json, TimeSpan.FromHours(1));
+        return _cache.StringSet(key, json, ttl);
     }
-    
-    public bool Delete(string key)
+
+    public async Task<T> GetAsync<T>(string key)
     {
-        return _cache.KeyExists(key) && _cache.KeyDelete(key);
+        var value = await _cache.StringGetAsync(key);
+        return value.HasValue ? JsonSerializer.Deserialize<T>(value) : default;
     }
+
+    public async Task<TimeSpan?> GetTtlAsync(string key) =>
+        await _cache.KeyTimeToLiveAsync(key);
+
+    public async Task<bool> UpdateAsync<T>(string key, T value)
+    {
+        var propertyInfo = typeof(T).GetProperty("Modified");
+        if (propertyInfo != null && propertyInfo.CanWrite)
+            propertyInfo.SetValue(value, DateTime.UtcNow);
+
+        var json = JsonSerializer.Serialize(value);
+        return await _cache.StringSetAsync(key, json);
+    }
+
+    public async Task<bool> DeleteAsync(string key) =>
+        await _cache.KeyDeleteAsync(key);
 }

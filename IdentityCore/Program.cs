@@ -61,18 +61,18 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
     {
         throw new InvalidOperationException("RedisConnectionUrl is not configured.");
     }
-    
+
     return ConnectionMultiplexer.Connect(redisConnectionUrl);
 });
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<RefreshTokenRepository>();
 builder.Services.AddScoped<CacheRepositoryBase>();
-builder.Services.AddScoped<ConfirmationRegistrationRepository>();
+builder.Services.AddScoped<ConfirmationTokenRepository>();
 
 builder.Services.AddScoped<UserManager>();
 builder.Services.AddScoped<RefreshTokenManager>();
-builder.Services.AddScoped<ConfirmationRegistrationManager>();
+builder.Services.AddScoped<ConfirmationTokenManager>();
 builder.Services.AddScoped<MailManager>();
 
 builder.Services.AddControllers()

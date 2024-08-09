@@ -6,6 +6,7 @@ using Helpers;
 using IdentityCore.Configuration;
 using IdentityCore.DAL.Models;
 using IdentityCore.DAL.Repository;
+using IdentityCore.DAL.Repository.Base;
 using IdentityCore.Models;
 using IdentityCore.Models.Request;
 using IdentityCore.Models.Response;
@@ -18,25 +19,27 @@ public class UserManager
 
     private readonly UserRepository _userRepo;
     private readonly RefreshTokenRepository _refreshTokenRepo;
-
+    private readonly ConfirmationTokenRepository _ctRepo;
+    
     private readonly RefreshTokenManager _refreshTokenManager;
 
     public UserManager(UserRepository userRepo,
         RefreshTokenRepository refreshTokenRepository,
+        ConfirmationTokenRepository ctRepo,
         RefreshTokenManager refreshTokenManager)
     {
         _userRepo = userRepo;
         _refreshTokenRepo = refreshTokenRepository;
+        _ctRepo = ctRepo;
 
         _refreshTokenManager = refreshTokenManager;
     }
 
     #endregion
 
-    public async Task<User> CreateUser(UserCreateRequest userCreateRequest)
+    public User CreateUserForRegistration(UserCreateRequest userCreateRequest)
     {
         var salt = UserHelper.GenerateSalt();
-
         var user = new User
         {
             Id = Guid.NewGuid(),
@@ -46,9 +49,7 @@ public class UserManager
             Password = UserHelper.GetPasswordHash(userCreateRequest.Password, salt)
         };
 
-        user.RegistrationToken = ConfirmationRegistrationManager.CreateConfirmationRegistrationToken(user);
-
-        return await _userRepo.CreateAsync(user);
+        return _userRepo.AddToRedis(user, TokenConfig.Values.RegistrationConfirmation) ? user : null;
     }
 
     private static string CreateJwt(User user)
@@ -132,6 +133,14 @@ public class UserManager
         return new OperationResult<User>("Error updating user");
     }
 
+    public async Task<bool> DeleteUserFromRedisAsync(User user)
+    {
+        if (user is null)
+            return false;
+        
+        return await _userRepo.DeleteUserFromRedisAsync(user);
+    }
+    
     public async Task<bool> DeleteUserAsync(User user)
     {
         if (user is null)
@@ -152,6 +161,20 @@ public class UserManager
     }
 
     #region Validation
+
+    public async Task<string> ActivatedUser(User user, ConfirmationToken token)
+    {
+        var isTokenRemoved = await _ctRepo.DeleteFromRedisAsync(token);
+        var isUserRemoved = await _userRepo.DeleteUserFromRedisAsync(user);
+
+        if (!isTokenRemoved || !isUserRemoved)
+            return "Activation error";
+
+        user.IsActive = true;
+        return await _userRepo.CreateAsync(user) is not null
+            ? string.Empty
+            : "Activation error";
+    }
 
     public async Task<OperationResult<User>> ValidateLogin(UserLoginRequest loginRequest)
     {
@@ -175,27 +198,14 @@ public class UserManager
             || string.IsNullOrWhiteSpace(userCreateRequest.Username)
             || string.IsNullOrWhiteSpace(userCreateRequest.Password))
             return "Invalid input data";
-
-        var existingEmailUser = await _userRepo.GetUserByEmailAsync(userCreateRequest.Email);
-        if (existingEmailUser != null)
+        
+        if (await _userRepo.UserExistsByEmailAsync(userCreateRequest.Email))
             return "Email is already taken";
-
-        var existingUsernameUser = await _userRepo.GetUserByUsernameAsync(userCreateRequest.Username);
-        if (existingUsernameUser != null)
+        
+        if (await _userRepo.UserExistsByUsernameAsync(userCreateRequest.Username))
             return "A user with this username exists";
 
         return string.Empty;
-    }
-
-    public async Task<OperationResult<User>> ValidateResendConfirmationMail(ResendConfirmationEmailRequest emailRequest)
-    {
-        if (string.IsNullOrWhiteSpace(emailRequest.Email))
-            return new OperationResult<User>("Invalid input data");
-
-        var user = await _userRepo.GetPendingActivationUserAsync(emailRequest.UserId, emailRequest.Email);
-        return user == null
-            ? new OperationResult<User>("Invalid input data")
-            : new OperationResult<User>(user);
     }
 
     #endregion
@@ -243,7 +253,7 @@ public class UserManager
             };
         });
 
-        return await _userRepo.AddedRange(usersToAdd);
+        return await _userRepo.AddedRangeAsync(usersToAdd);
     }
 
     #endregion

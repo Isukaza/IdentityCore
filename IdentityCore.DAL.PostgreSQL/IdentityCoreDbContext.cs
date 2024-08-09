@@ -30,7 +30,6 @@ public class IdentityCoreDbContext : DbContext
 
     public virtual DbSet<User> Users { get; set; }
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
-    public virtual DbSet<RegistrationToken> RegistrationTokens { get; set; }
 
     #endregion
 
@@ -54,16 +53,6 @@ public class IdentityCoreDbContext : DbContext
             .HasOne(rt => rt.User)
             .WithMany(u => u.RefreshTokens)
             .HasForeignKey(rt => rt.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        #endregion
-
-        #region Users + RegistrationTokens
-
-        modelBuilder.Entity<RegistrationToken>()
-            .HasOne(rt => rt.User)
-            .WithOne(u => u.RegistrationToken)
-            .HasForeignKey<RegistrationToken>(rt => rt.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
         #endregion

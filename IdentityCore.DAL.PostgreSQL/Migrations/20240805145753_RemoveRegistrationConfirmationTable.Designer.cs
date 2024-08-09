@@ -3,6 +3,7 @@ using System;
 using IdentityCore.DAL.PorstgreSQL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IdentityCore.DAL.PorstgreSQL.Migrations
 {
     [DbContext(typeof(IdentityCoreDbContext))]
-    partial class IdentityCoreDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240805145753_RemoveRegistrationConfirmationTable")]
+    partial class RemoveRegistrationConfirmationTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
