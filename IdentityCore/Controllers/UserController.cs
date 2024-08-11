@@ -2,9 +2,9 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 
 using Helpers;
+using Helpers.ValidationAttributes;
 using IdentityCore.Configuration;
 using IdentityCore.DAL.Models;
-using IdentityCore.DAL.Repository;
 using IdentityCore.Managers;
 using IdentityCore.Models;
 using IdentityCore.Models.Request;
@@ -18,18 +18,12 @@ public class UserController : Controller
 {
     #region C-tor and fields
 
-    private readonly UserRepository _userRepo;
     private readonly UserManager _userManager;
     private readonly MailManager _mailManager;
     private readonly ConfirmationTokenManager _ctManager;
 
-    public UserController(
-        UserRepository userRepository,
-        UserManager userManager,
-        MailManager mailManager,
-        ConfirmationTokenManager ctManager)
+    public UserController(UserManager userManager, MailManager mailManager, ConfirmationTokenManager ctManager)
     {
-        _userRepo = userRepository;
         _userManager = userManager;
         _mailManager = mailManager;
         _ctManager = ctManager;
@@ -43,7 +37,7 @@ public class UserController : Controller
     [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetUser(Guid useId)
     {
-        var user = await _userRepo.GetUserByIdAsync(useId);
+        var user = await _userManager.GetUserByIdAsync(useId);
 
         return user != null
             ? await StatusCodes.Status200OK.ResultState("User info", user.ToUserResponse())
@@ -62,20 +56,20 @@ public class UserController : Controller
         if (user is null)
             return await StatusCodes.Status500InternalServerError.ResultState("Error creating user");
 
-        var registrationToken = _ctManager.CreateConfirmationToken(user, TokenType.RegistrationConfirmation);
-        if (registrationToken is null)
+        var cfmToken = _ctManager.CreateConfirmationToken(user.Id, TokenType.RegistrationConfirmation);
+        if (cfmToken is null)
         {
-            _ = await _userManager.DeleteUserFromRedisAsync(user);
+            _ = await _userManager.DeleteRegisteredUserFromRedisAsync(user);
             return await StatusCodes.Status500InternalServerError.ResultState("Error creating user");
         }
 
-        var confirmationLink = Mail.GetConfirmationLink(registrationToken.Value, registrationToken.TokenType);
+        var cfmLink = MailConfig.GetConfirmationLink(cfmToken.Value, cfmToken.TokenType);
         var sendMailError = await _mailManager.SendEmailAsync(
-            Mail.Configs.Mail,
+            MailConfig.Values.Mail,
             user.Email,
-            registrationToken.TokenType,
-            user.Username,
-            confirmationLink);
+            cfmToken.TokenType,
+            cfmLink,
+            user);
 
         return string.IsNullOrEmpty(sendMailError)
             ? await StatusCodes.Status201Created.ResultState(user.Id.ToString())
@@ -86,35 +80,41 @@ public class UserController : Controller
     [ProducesResponseType(typeof(UserResponse), StatusCodes.Status201Created)]
     public async Task<IActionResult> UpdateUser([FromBody] UserUpdateRequest updateRequest)
     {
-        #region Validation
+        if (await _userManager.IsUserUpdateInProgress(updateRequest.Id))
+            return await StatusCodes.Status429TooManyRequests.ResultState("Complete the current update process");
+        
+        var result = await _userManager.ValidateUserUpdateAsync(updateRequest);
+        if (!result.Success)
+            return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
+        
+        var tokenType = UserManager.DetermineConfirmationTokenType(updateRequest);
+        if (tokenType is TokenType.Unknown)
+            return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
 
-        if (string.IsNullOrEmpty(updateRequest.Username)
-            && string.IsNullOrEmpty(updateRequest.Email)
-            && string.IsNullOrEmpty(updateRequest.Password))
-            return await StatusCodes.Status400BadRequest.ResultState("At least one field must be specified");
+        var redisUserUpdate = _userManager.SaveUserUpdateToRedisAsync(updateRequest, tokenType);
+        if (redisUserUpdate is null)
+            return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
 
-        var user = await _userRepo.GetUserByIdAsync(updateRequest.Id);
-        if (user is null)
-            return await StatusCodes.Status404NotFound.ResultState("User not found");
+        var cfmToken = _ctManager.CreateConfirmationToken(result.Data.Id, tokenType);
+        var cfmLink = MailConfig.GetConfirmationLink(cfmToken.Value, cfmToken.TokenType);
+        var sendMailError = await _mailManager.SendEmailAsync(
+            MailConfig.Values.Mail,
+            result.Data.Email,
+            tokenType,
+            cfmLink,
+            result.Data,
+            redisUserUpdate);
 
-        #endregion
-
-        var result = await _userManager.UpdateUser(updateRequest, user);
-
-        if (result.Success)
-            return await StatusCodes.Status200OK.ResultState("User updated", result.Data.ToUserResponse());
-
-        return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
+        return string.IsNullOrEmpty(sendMailError)
+            ? await StatusCodes.Status200OK.ResultState("Awaiting confirmation by mail")
+            : await StatusCodes.Status500InternalServerError.ResultState("Not send mail");
     }
 
     [HttpDelete("delete")]
     [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
     public async Task<IActionResult> DeleteUser(Guid userId)
     {
-        if (userId == Guid.Empty)
-            return await StatusCodes.Status400BadRequest.ResultState("Incorrect ID");
-
-        var user = await _userRepo.GetUserByIdAsync(userId);
+        var user = await _userManager.GetUserByIdAsync(userId);
         if (user is null)
             return await StatusCodes.Status404NotFound.ResultState("User not found");
 
@@ -125,16 +125,18 @@ public class UserController : Controller
 
     #endregion
 
-    #region Confirmation registration
+    #region Confirmation action
 
-    [HttpGet("confirmation-action")]
-    public async Task<IActionResult> ConfirmationRegistration([Required] string token, [Required] TokenType tokenType)
+    [HttpGet("cfm-token")]
+    public async Task<IActionResult> ConfirmationToken(
+        [Required] [ValidToken] string token,
+        [Required] TokenType tokenType)
     {
         var tokenDb = await _ctManager.GetTokenAsync(token, tokenType);
         if (tokenDb is null)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
 
-        var user = await _userRepo.GetUserFromRedisByIdAsync(tokenDb.UserId);
+        var user = await _userManager.GetUserFromRedisByIdAsync(tokenDb.UserId, tokenType);
         if (user is null)
         {
             _ = await _ctManager.DeleteToken(tokenDb);
@@ -147,15 +149,14 @@ public class UserController : Controller
             : await StatusCodes.Status500InternalServerError.ResultState(userActivationError);
     }
 
-    [HttpPost("resend-reg-token")]
-    public async Task<IActionResult> ResendConfirmationRegistrationUser(
-        [FromBody] ResendConfirmationEmailRequest emailRequest)
+    [HttpPost("resend-cfm-token")]
+    public async Task<IActionResult> ResendCfmToken([FromBody] ResendConfirmationEmailRequest emailRequest)
     {
-        var result = await _ctManager.ValidateResendConfirmationRegistrationMail(emailRequest);
+        /*var result = await _ctManager.ValidateResendConfirmationRegistrationMail(emailRequest);
         if (!result.Success)
             return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
 
-        var user = await _userRepo.GetUserFromRedisByIdAsync(result.Data.UserId);
+        var user = await _userManager.GetUserFromRedisByIdAsync(result.Data.UserId);
         if (user is null)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
 
@@ -173,12 +174,15 @@ public class UserController : Controller
             Mail.Configs.Mail,
             user.Email,
             updatedToken.TokenType,
-            user.Username,
-            confirmationLink);
+            confirmationLink,
+            null,
+            user.Username);
 
         return string.IsNullOrEmpty(sendMailError)
             ? await StatusCodes.Status200OK.ResultState("Operation was successfully completed")
-            : await StatusCodes.Status400BadRequest.ResultState("Not send mail");
+            : await StatusCodes.Status400BadRequest.ResultState("Not send mail");*/
+        
+        return await StatusCodes.Status500InternalServerError.ResultState();
     }
 
     #endregion

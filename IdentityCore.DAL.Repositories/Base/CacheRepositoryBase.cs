@@ -39,4 +39,7 @@ public class CacheRepositoryBase
 
     public async Task<bool> DeleteAsync(string key) =>
         await _cache.KeyDeleteAsync(key);
+    
+    public async Task<bool> KeyExistsAsync(string key) =>
+        await _cache.KeyExistsAsync(key);
 }

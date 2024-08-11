@@ -4,7 +4,7 @@ using IdentityCore.DAL.Models;
 
 namespace IdentityCore.Configuration;
 
-public static class Mail
+public static class MailConfig
 {
     private static class Keys
     {
@@ -18,7 +18,7 @@ public static class Mail
         public const string MinIntervalBetweenAttemptsKey = GroupName + ":MinIntervalBetweenAttempts";
     }
 
-    public static class Configs
+    public static class Values
     {
         public static readonly string Mail;
         public static readonly RegionEndpoint RegionEndpoint;
@@ -28,7 +28,7 @@ public static class Mail
         public static readonly TimeSpan NextAttemptAvailableAfter;
         public static readonly TimeSpan MinIntervalBetweenAttempts;
 
-        static Configs()
+        static Values()
         {
             var configuration = ConfigBase.GetConfiguration();
             Mail = configuration[Keys.MailKey];

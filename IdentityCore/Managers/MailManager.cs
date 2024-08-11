@@ -1,4 +1,5 @@
 using System.Net;
+
 using Amazon.Runtime;
 using Amazon.SimpleEmailV2;
 using Amazon.SimpleEmailV2.Model;
@@ -11,17 +12,19 @@ namespace IdentityCore.Managers;
 public class MailManager
 {
     private readonly AmazonSimpleEmailServiceV2Client _sesClient = new(
-        Mail.Configs.AwsAccessKeyId,
-        Mail.Configs.AwsSecretAccessKey,
-        Mail.Configs.RegionEndpoint);
+        MailConfig.Values.AwsAccessKeyId,
+        MailConfig.Values.AwsSecretAccessKey,
+        MailConfig.Values.RegionEndpoint);
 
     public async Task<string> SendEmailAsync(
         string fromEmailAddress,
         string toEmailAddress,
         TokenType tokenType,
-        string userName,
-        string confirmationLink)
+        string confirmationLink,
+        User user = null,
+        RedisUserUpdate userUpdate = null)
     {
+        var template = GenerateConfirmationContent(tokenType, confirmationLink, user, userUpdate);
         var request = new SendEmailRequest
         {
             FromEmailAddress = fromEmailAddress,
@@ -31,7 +34,7 @@ public class MailManager
                 Template = new Template
                 {
                     TemplateName = tokenType.ToString(),
-                    TemplateData = $"{{ \"username\":\"{userName}\", \"confirmationLink\":\"{confirmationLink}\"}}"
+                    TemplateData = template
                 }
             }
         };
@@ -63,7 +66,7 @@ public class MailManager
 
         return await ExecuteSesRequestAsync(() => _sesClient.DeleteEmailTemplateAsync(request));
     }
-    
+
     private static async Task<string> ExecuteSesRequestAsync<T>(Func<Task<T>> action)
         where T : AmazonWebServiceResponse
     {
@@ -104,5 +107,36 @@ public class MailManager
         }
 #endif
         return "Unknown error";
+    }
+
+    private static string GenerateConfirmationContent(
+        TokenType tokenType,
+        string confirmationLink,
+        User user,
+        RedisUserUpdate userUpdate = null)
+    {
+        return tokenType switch
+        {
+            TokenType.RegistrationConfirmation =>
+                $"{{ \"username\":\"{user.Username}\", \"confirmationLink\":\"{confirmationLink}\"}}",
+
+            TokenType.PasswordChange when userUpdate is not null =>
+                $"{{ \"username\":\"{user.Username}\", \"confirmationLink\":\"{confirmationLink}\"}}",
+
+            TokenType.UsernameChange when userUpdate is not null =>
+                $"{{ \"newUsername\":\"{userUpdate.Username}\", \"oldUsername\":\"{user.Username}\", " +
+                $"\"confirmationLink\":\"{confirmationLink}\"}}",
+
+            TokenType.EmailChangeNew when userUpdate is not null =>
+                $"{{ \"username\":\"{user.Username}\", \"newEmail\":\"{userUpdate.Email}\", " +
+                $"\"confirmationLink\":\"{confirmationLink}\"}}",
+
+            TokenType.EmailChangeOld when userUpdate is not null =>
+                $"{{ \"username\":\"{user.Username}\", " +
+                $"\"newEmail\":\"{userUpdate.Email}\", \"oldEmail\":\"{user.Email}\", " +
+                $"\"confirmationLink\":\"{confirmationLink}\"}}",
+
+            _ => string.Empty
+        };
     }
 }

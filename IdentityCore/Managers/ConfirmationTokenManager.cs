@@ -22,47 +22,47 @@ public class ConfirmationTokenManager
 
     #endregion
 
-    public async Task<ConfirmationToken> GetTokenAsync(string token, TokenType tokenType) =>
+    public async Task<RedisConfirmationToken> GetTokenAsync(string token, TokenType tokenType) =>
         await _ctRepo.GetFromRedis(token, tokenType);
 
-    public static string GetNextAttemptTime(ConfirmationToken token)
+    public static string GetNextAttemptTime(RedisConfirmationToken token)
     {
         var timeDifference = DateTime.UtcNow - token.Modified;
-        if ((token.AttemptCount < Mail.Configs.MaxAttemptsConfirmationResend
-             || timeDifference > Mail.Configs.NextAttemptAvailableAfter)
-            && timeDifference > Mail.Configs.MinIntervalBetweenAttempts)
+        if ((token.AttemptCount < MailConfig.Values.MaxAttemptsConfirmationResend
+             || timeDifference > MailConfig.Values.NextAttemptAvailableAfter)
+            && timeDifference > MailConfig.Values.MinIntervalBetweenAttempts)
             return string.Empty;
 
-        var nextAvailableTime = token.Modified.Add(token.AttemptCount < Mail.Configs.MaxAttemptsConfirmationResend
-            ? Mail.Configs.MinIntervalBetweenAttempts
-            : Mail.Configs.NextAttemptAvailableAfter);
+        var nextAvailableTime = token.Modified.Add(token.AttemptCount < MailConfig.Values.MaxAttemptsConfirmationResend
+            ? MailConfig.Values.MinIntervalBetweenAttempts
+            : MailConfig.Values.NextAttemptAvailableAfter);
         return nextAvailableTime.ToString("yyyy-MM-ddTHH:mm:ssZ");
     }
 
-    public ConfirmationToken CreateConfirmationToken(User user, TokenType tokenType)
+    public RedisConfirmationToken CreateConfirmationToken(Guid id, TokenType tokenType)
     {
         var ttl = TokenConfig.GetTtlForTokenType(tokenType);
-        var token = new ConfirmationToken
+        var token = new RedisConfirmationToken
         {
-            UserId = user.Id,
-            Value = UserHelper.GetToken(user.Id),
+            UserId = id,
+            Value = UserHelper.GetToken(id),
             TokenType = tokenType
         };
         
         return _ctRepo.AddToRedis(token, ttl) ? token : null;
     }
 
-    public async Task<ConfirmationToken> UpdateRegistrationToken(ConfirmationToken token, Guid userId)
+    public async Task<RedisConfirmationToken> UpdateRegistrationToken(RedisConfirmationToken token, Guid userId)
     {
         if (token == null)
             return null;
 
-        var ttl = await _ctRepo.GetFromRedisTllAsync(token.Value);
+        var ttl = await _ctRepo.GetFromRedisTllAsync(token.Value, token.TokenType);
         if (!await _ctRepo.DeleteFromRedisAsync(token))
             return null;
         
         token.Value = UserHelper.GetToken(userId);
-        if (DateTime.UtcNow - token.Modified >= Mail.Configs.NextAttemptAvailableAfter)
+        if (DateTime.UtcNow - token.Modified >= MailConfig.Values.NextAttemptAvailableAfter)
             token.AttemptCount = 0;
 
         token.AttemptCount = ++token.AttemptCount;
@@ -70,22 +70,23 @@ public class ConfirmationTokenManager
         return _ctRepo.AddToRedis(token, ttl) ? token : null;
     }
 
-    public async Task<bool> DeleteToken(ConfirmationToken token) =>
+    public async Task<bool> DeleteToken(RedisConfirmationToken token) =>
         await _ctRepo.DeleteFromRedisAsync(token);
     
-    public async Task<OperationResult<ConfirmationToken>> ValidateResendConfirmationRegistrationMail(
+    public async Task<OperationResult<RedisConfirmationToken>> ValidateResendConfirmationRegistrationMail(
         ResendConfirmationEmailRequest emailRequest)
     {
         if (string.IsNullOrWhiteSpace(emailRequest.Email))
-            return new OperationResult<ConfirmationToken>("Invalid input data");
+            return new OperationResult<RedisConfirmationToken>("Invalid input data");
 
         var token = await _ctRepo.GetFromRedis(emailRequest.UserId, TokenType.RegistrationConfirmation);
         if (token is null)
-            return new OperationResult<ConfirmationToken>("Invalid input data");
+            return new OperationResult<RedisConfirmationToken>("Invalid input data");
         
-        var user = await _userRepo.GetUserFromRedisByIdAsync(emailRequest.UserId);
+        var user = await _userRepo
+            .GetUserFromRedisByIdAsync(emailRequest.UserId, TokenType.RegistrationConfirmation);
         return user == null || user.Email != emailRequest.Email
-            ? new OperationResult<ConfirmationToken>("Invalid input data")
-            : new OperationResult<ConfirmationToken>(token);
+            ? new OperationResult<RedisConfirmationToken>("Invalid input data")
+            : new OperationResult<RedisConfirmationToken>(token);
     }
 }

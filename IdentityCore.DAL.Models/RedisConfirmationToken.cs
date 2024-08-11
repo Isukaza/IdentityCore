@@ -2,15 +2,15 @@
 
 namespace IdentityCore.DAL.Models;
 
-public record ConfirmationToken
+public record RedisConfirmationToken
 {
-    public Guid UserId { get; set; }
+    public Guid UserId { get; init; }
 
     [Required(ErrorMessage = "Token is required")]
     public required string Value { get; set; }
     
     [Required(ErrorMessage = "TokenType is required")]
-    public required TokenType TokenType { get; set; }
+    public required TokenType TokenType { get; init; }
 
     public int AttemptCount { get; set; } = 1;
     

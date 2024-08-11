@@ -6,5 +6,6 @@ public enum TokenType
     EmailChangeOld,
     EmailChangeNew,
     PasswordChange,
-    UsernameChange
+    UsernameChange,
+    Unknown
 }
