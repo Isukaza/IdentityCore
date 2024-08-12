@@ -82,11 +82,11 @@ public class UserController : Controller
     {
         if (await _userManager.IsUserUpdateInProgress(updateRequest.Id))
             return await StatusCodes.Status429TooManyRequests.ResultState("Complete the current update process");
-        
+
         var result = await _userManager.ValidateUserUpdateAsync(updateRequest);
         if (!result.Success)
             return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
-        
+
         var tokenType = UserManager.DetermineConfirmationTokenType(updateRequest);
         if (tokenType is TokenType.Unknown)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
@@ -136,23 +136,24 @@ public class UserController : Controller
         if (tokenDb is null)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
 
-        var user = await _userManager.GetUserFromRedisByIdAsync(tokenDb.UserId, tokenType);
+        var user = await _userManager.GetUserByIdAsync(tokenDb.UserId);
         if (user is null)
-        {
-            _ = await _ctManager.DeleteToken(tokenDb);
             return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
-        }
 
-        var userActivationError = await _userManager.ActivatedUser(user, tokenDb);
-        return string.IsNullOrEmpty(userActivationError)
+        var userUpdateData = await _userManager.GetUpdateUserFromRedisByIdAsync(tokenDb.UserId);
+        if (userUpdateData is null && tokenDb.TokenType != TokenType.RegistrationConfirmation)
+            return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
+
+        var executionError = await _userManager.ProcessUserTokenAction(user, userUpdateData, tokenDb);
+        return string.IsNullOrEmpty(executionError)
             ? await StatusCodes.Status200OK.ResultState("Operation was successfully completed")
-            : await StatusCodes.Status500InternalServerError.ResultState(userActivationError);
+            : await StatusCodes.Status500InternalServerError.ResultState(executionError);
     }
 
     [HttpPost("resend-cfm-token")]
     public async Task<IActionResult> ResendCfmToken([FromBody] ResendConfirmationEmailRequest emailRequest)
     {
-        /*var result = await _ctManager.ValidateResendConfirmationRegistrationMail(emailRequest);
+        /*var result = await _ctManager.ValidateResendCfmTokenMail(emailRequest);
         if (!result.Success)
             return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
 
@@ -181,7 +182,7 @@ public class UserController : Controller
         return string.IsNullOrEmpty(sendMailError)
             ? await StatusCodes.Status200OK.ResultState("Operation was successfully completed")
             : await StatusCodes.Status400BadRequest.ResultState("Not send mail");*/
-        
+
         return await StatusCodes.Status500InternalServerError.ResultState();
     }
 

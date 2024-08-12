@@ -37,9 +37,12 @@ public class CacheRepositoryBase
         return await _cache.StringSetAsync(key, json);
     }
 
+    public async Task<bool> UpdateTtlAsync(string key, TimeSpan ttl) =>
+        await _cache.KeyExpireAsync(key, ttl);
+
     public async Task<bool> DeleteAsync(string key) =>
         await _cache.KeyDeleteAsync(key);
-    
+
     public async Task<bool> KeyExistsAsync(string key) =>
         await _cache.KeyExistsAsync(key);
 }

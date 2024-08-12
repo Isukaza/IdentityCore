@@ -11,10 +11,16 @@ namespace IdentityCore.Managers;
 
 public class MailManager
 {
+    #region Fields
+
     private readonly AmazonSimpleEmailServiceV2Client _sesClient = new(
         MailConfig.Values.AwsAccessKeyId,
         MailConfig.Values.AwsSecretAccessKey,
         MailConfig.Values.RegionEndpoint);
+
+    #endregion
+
+    #region Email Operations
 
     public async Task<string> SendEmailAsync(
         string fromEmailAddress,
@@ -42,6 +48,10 @@ public class MailManager
         return await ExecuteSesRequestAsync(() => _sesClient.SendEmailAsync(request));
     }
 
+    #endregion
+
+    #region Template
+
     public async Task<string> CreateTemplate(string templateName, string subject, string htmlContent)
     {
         var request = new CreateEmailTemplateRequest
@@ -66,6 +76,10 @@ public class MailManager
 
         return await ExecuteSesRequestAsync(() => _sesClient.DeleteEmailTemplateAsync(request));
     }
+
+    #endregion
+
+    #region Private Methods
 
     private static async Task<string> ExecuteSesRequestAsync<T>(Func<Task<T>> action)
         where T : AmazonWebServiceResponse
@@ -106,7 +120,6 @@ public class MailManager
             return $"An error occurred: {ex.Message}";
         }
 #endif
-        return "Unknown error";
     }
 
     private static string GenerateConfirmationContent(
@@ -118,25 +131,32 @@ public class MailManager
         return tokenType switch
         {
             TokenType.RegistrationConfirmation =>
-                $"{{ \"username\":\"{user.Username}\", \"confirmationLink\":\"{confirmationLink}\"}}",
+                $"{{\"username\":\"{user.Username}\", " +
+                $"\"confirmationLink\":\"{confirmationLink}\"}}",
 
             TokenType.PasswordChange when userUpdate is not null =>
-                $"{{ \"username\":\"{user.Username}\", \"confirmationLink\":\"{confirmationLink}\"}}",
+                $"{{\"username\":\"{user.Username}\", " +
+                $"\"confirmationLink\":\"{confirmationLink}\"}}",
 
             TokenType.UsernameChange when userUpdate is not null =>
-                $"{{ \"newUsername\":\"{userUpdate.Username}\", \"oldUsername\":\"{user.Username}\", " +
+                $"{{\"newUsername\":\"{userUpdate.Username}\", " +
+                $"\"oldUsername\":\"{user.Username}\", " +
                 $"\"confirmationLink\":\"{confirmationLink}\"}}",
 
             TokenType.EmailChangeNew when userUpdate is not null =>
-                $"{{ \"username\":\"{user.Username}\", \"newEmail\":\"{userUpdate.Email}\", " +
+                $"{{\"username\":\"{user.Username}\", " +
+                $"\"newEmail\":\"{userUpdate.Email}\", " +
                 $"\"confirmationLink\":\"{confirmationLink}\"}}",
 
             TokenType.EmailChangeOld when userUpdate is not null =>
-                $"{{ \"username\":\"{user.Username}\", " +
-                $"\"newEmail\":\"{userUpdate.Email}\", \"oldEmail\":\"{user.Email}\", " +
+                $"{{\"username\":\"{user.Username}\", " +
+                $"\"newEmail\":\"{userUpdate.Email}\", " +
+                $"\"oldEmail\":\"{user.Email}\", " +
                 $"\"confirmationLink\":\"{confirmationLink}\"}}",
 
             _ => string.Empty
         };
     }
+
+    #endregion
 }
