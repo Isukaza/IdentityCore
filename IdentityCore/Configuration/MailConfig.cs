@@ -1,6 +1,6 @@
 using System.Net;
-using Amazon;
 using IdentityCore.DAL.Models;
+using Amazon;
 
 namespace IdentityCore.Configuration;
 
@@ -49,11 +49,13 @@ public static class MailConfig
                     : TimeSpan.FromMinutes(1);
         }
     }
-    
+
     public static string GetConfirmationLink(string token, TokenType tokenType)
     {
         var tokenForUrl = WebUtility.UrlEncode(token);
-        return $"{Host.Configs.Host}{Host.Configs.RegistrationConfirmationPath}" +
-               $"?token={tokenForUrl}&tokenType={tokenType}";
+        var cfmPath = tokenType == TokenType.RegistrationConfirmation
+            ? HostConfig.Values.RegistrationConfirmationPath
+            : HostConfig.Values.ConfirmationTokenPath;
+        return $"{HostConfig.Values.Host}{cfmPath}?token={tokenForUrl}&tokenType={tokenType}";
     }
 }

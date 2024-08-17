@@ -1,24 +1,27 @@
 namespace IdentityCore.Configuration;
 
-public static class Host
+public static class HostConfig
 {
     private static class Keys
     {
         private const string GroupName = "Host";
         public const string HostKey = GroupName + ":URL";
         public const string RegistrationConfirmationPathKey = GroupName + ":RegistrationConfirmationPath";
+        public const string ConfirmationTokenPathKey = GroupName + ":ConfirmationTokenPath";
     }
 
-    public static class Configs
+    public static class Values
     {
         public static readonly string Host;
         public static readonly string RegistrationConfirmationPath;
-        
-        static Configs()
+        public static readonly string ConfirmationTokenPath;
+
+        static Values()
         {
             var configuration = ConfigBase.GetConfiguration();
             Host = configuration[Keys.HostKey];
             RegistrationConfirmationPath = configuration[Keys.RegistrationConfirmationPathKey];
+            ConfirmationTokenPath = configuration[Keys.ConfirmationTokenPathKey];
         }
     }
 }
