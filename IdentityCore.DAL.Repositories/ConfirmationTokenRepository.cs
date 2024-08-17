@@ -17,6 +17,27 @@ public class ConfirmationTokenRepository
 
     #endregion
 
+    public async Task<RedisConfirmationToken> GetFromRedis(string key, TokenType tokenType)
+    {
+        var keyRedis = $"{RedisKeyPrefix}:{tokenType}:{key}";
+        var tokenDb = await _cacheRepo.GetAsync<RedisConfirmationToken>(keyRedis);
+        return tokenDb != null && tokenDb.TokenType == tokenType ? tokenDb : null;
+    }
+    
+    public async Task<RedisConfirmationToken> GetFromByUserIdRedis(Guid userId, TokenType tokenType)
+    {
+        var keyUserId = $"{RedisKeyPrefix}:{tokenType}:{userId}";
+        var tokenValue = await _cacheRepo.GetAsync<string>(keyUserId);
+
+        if (string.IsNullOrEmpty(tokenValue))
+            return null;
+        
+        var keyTokenValue = $"{RedisKeyPrefix}:{tokenType}:{tokenValue}";
+        var tokenDb = await _cacheRepo.GetAsync<RedisConfirmationToken>(keyTokenValue);
+        
+        return tokenDb != null && tokenDb.TokenType == tokenType ? tokenDb : null;
+    }
+    
     public bool AddToRedis(RedisConfirmationToken token, TimeSpan ttl)
     {
         var keyTokenValue = $"{RedisKeyPrefix}:{token.TokenType}:{token.Value}";
@@ -26,30 +47,6 @@ public class ConfirmationTokenRepository
         var isTokenUserIdAdded = _cacheRepo.Add(keyUserId, token.Value, ttl);
 
         return isTokenAdded && isTokenUserIdAdded;
-    }
-
-    public async Task<RedisConfirmationToken> GetFromRedis(string key, TokenType tokenType)
-    {
-        var keyRedis = $"{RedisKeyPrefix}:{tokenType}:{key}";
-        var tokenDb = await _cacheRepo.GetAsync<RedisConfirmationToken>(keyRedis);
-        return tokenDb != null && tokenDb.TokenType == tokenType ? tokenDb : null;
-    }
-    
-    public async Task<RedisConfirmationToken> GetFromRedis(Guid userId, TokenType tokenType)
-    {
-        var keyUserId = $"{RedisKeyPrefix}:{tokenType}:{userId}";
-        var tokenValue = await _cacheRepo.GetAsync<string>(keyUserId);
-
-        var keyTokenValue = $"{RedisKeyPrefix}:{tokenType}:{tokenValue}";
-        var tokenDb = await _cacheRepo.GetAsync<RedisConfirmationToken>(keyTokenValue);
-        
-        return tokenDb != null && tokenDb.TokenType == tokenType ? tokenDb : null;
-    }
-
-    public async Task<TimeSpan> GetFromRedisTllAsync(string token, TokenType tokenType)
-    {
-        var key = $"{RedisKeyPrefix}:{tokenType}:{token}";
-        return await _cacheRepo.GetTtlAsync(key) ?? TimeSpan.Zero;
     }
 
     public async Task<bool> DeleteFromRedisAsync(RedisConfirmationToken token)

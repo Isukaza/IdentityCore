@@ -24,17 +24,14 @@ public class CacheRepositoryBase
         return value.HasValue ? JsonSerializer.Deserialize<T>(value) : default;
     }
 
-    public async Task<TimeSpan?> GetTtlAsync(string key) =>
-        await _cache.KeyTimeToLiveAsync(key);
-
-    public async Task<bool> UpdateAsync<T>(string key, T value)
+    public async Task<bool> UpdateAsync<T>(string key, T value, TimeSpan expiry)
     {
         var propertyInfo = typeof(T).GetProperty("Modified");
         if (propertyInfo != null && propertyInfo.CanWrite)
             propertyInfo.SetValue(value, DateTime.UtcNow);
 
         var json = JsonSerializer.Serialize(value);
-        return await _cache.StringSetAsync(key, json);
+        return await _cache.StringSetAsync(key, json, expiry);
     }
 
     public async Task<bool> UpdateTtlAsync(string key, TimeSpan ttl) =>

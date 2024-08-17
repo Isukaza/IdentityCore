@@ -2,7 +2,6 @@ using Helpers;
 using IdentityCore.Configuration;
 using IdentityCore.DAL.Models;
 using IdentityCore.DAL.Repository;
-using IdentityCore.Models;
 using IdentityCore.Models.Request;
 
 namespace IdentityCore.Managers;
@@ -21,9 +20,12 @@ public class ConfirmationTokenManager
     }
 
     #endregion
-
+    
     public async Task<RedisConfirmationToken> GetTokenAsync(string token, TokenType tokenType) =>
         await _ctRepo.GetFromRedis(token, tokenType);
+    
+    public async Task<RedisConfirmationToken> GetTokenByUserIdAsync(Guid userId, TokenType tokenType) =>
+        await _ctRepo.GetFromByUserIdRedis(userId, tokenType);
 
     public static string GetNextAttemptTime(RedisConfirmationToken token)
     {
@@ -52,41 +54,35 @@ public class ConfirmationTokenManager
         return _ctRepo.AddToRedis(token, ttl) ? token : null;
     }
 
-    public async Task<RedisConfirmationToken> UpdateCfmToken(RedisConfirmationToken token, Guid userId)
+    public async Task<RedisConfirmationToken> UpdateCfmToken(
+        RedisConfirmationToken token,
+        User user,
+        RedisUserUpdate userUpdate = null)
     {
-        if (token == null)
+        if (token == null || (token.TokenType != TokenType.RegistrationConfirmation && userUpdate == null))
+            return null;
+        
+        var ttl = TokenConfig.GetTtlForTokenType(token.TokenType);
+        var isRemovedToken = await _ctRepo.DeleteFromRedisAsync(token);
+        var isUpdateTtl = token.TokenType == TokenType.RegistrationConfirmation
+            ? await _userRepo.UpdateTtlRegUserAsync(user, ttl)
+            : await _userRepo.UpdateTtlUserUpdateAsync(userUpdate, token.TokenType, ttl);
+
+        if (!isRemovedToken || !isUpdateTtl)
             return null;
 
-        var ttl = await _ctRepo.GetFromRedisTllAsync(token.Value, token.TokenType);
-        if (!await _ctRepo.DeleteFromRedisAsync(token))
-            return null;
-
-        token.Value = UserHelper.GetToken(userId);
         if (DateTime.UtcNow - token.Modified >= MailConfig.Values.NextAttemptAvailableAfter)
             token.AttemptCount = 0;
 
+        token.Value = UserHelper.GetToken(token.UserId);
         token.AttemptCount = ++token.AttemptCount;
         token.Modified = DateTime.UtcNow;
         return _ctRepo.AddToRedis(token, ttl) ? token : null;
     }
 
-    public async Task<bool> DeleteToken(RedisConfirmationToken token) =>
-        await _ctRepo.DeleteFromRedisAsync(token);
-
-    public async Task<OperationResult<RedisConfirmationToken>> ValidateResendCfmTokenMail(
-        ResendConfirmationEmailRequest emailRequest)
+    public static bool ValidateTokenTypeForRequest(TokenType tokenType, bool isRegistration)
     {
-        if (string.IsNullOrWhiteSpace(emailRequest.Email))
-            return new OperationResult<RedisConfirmationToken>("Invalid input data");
-
-        var token = await _ctRepo.GetFromRedis(emailRequest.UserId, TokenType.RegistrationConfirmation);
-        if (token is null)
-            return new OperationResult<RedisConfirmationToken>("Invalid input data");
-
-        var user = await _userRepo
-            .GetRegUserFromRedisByIdAsync(emailRequest.UserId);
-        return user == null || user.Email != emailRequest.Email
-            ? new OperationResult<RedisConfirmationToken>("Invalid input data")
-            : new OperationResult<RedisConfirmationToken>(token);
+        return (isRegistration && tokenType == TokenType.RegistrationConfirmation)
+               || (!isRegistration && tokenType != TokenType.RegistrationConfirmation);
     }
 }

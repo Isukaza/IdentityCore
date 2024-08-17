@@ -50,7 +50,7 @@ public class UserRepository : DbRepositoryBase<User>
 
     #region Add
 
-    public bool AddToRedis(User user, TimeSpan ttl)
+    public bool AddRegUserToRedis(User user, TimeSpan ttl)
     {
         var keyBaseEntity = $"{RedisKeyPrefixRegUser}:{user.Id}";
         var isUserAdded = _cacheRepo.Add(keyBaseEntity, user, ttl);
@@ -111,7 +111,7 @@ public class UserRepository : DbRepositoryBase<User>
 
     #region Delete
 
-    public async Task<bool> DeleteRegisteredUserFromRedisAsync(User user)
+    public async Task<bool> DeleteRegUserFromRedisAsync(User user)
     {
         var keyBaseEntity = $"{RedisKeyPrefixRegUser}:{user.Id}";
         var isUserRemoved = await _cacheRepo.DeleteAsync(keyBaseEntity);
@@ -148,6 +148,20 @@ public class UserRepository : DbRepositoryBase<User>
 
     #region Update
 
+    public async Task<bool> UpdateTtlRegUserAsync(User user, TimeSpan ttl)
+    {
+        var keyBaseEntity = $"{RedisKeyPrefixRegUser}:{user.Id}";
+        var isUserAdded = await _cacheRepo.UpdateTtlAsync(keyBaseEntity, ttl);
+
+        var keyUsername = $"{RedisKeyPrefixUserName}:{user.Username}";
+        var isUsernameMapping = await _cacheRepo.UpdateTtlAsync(keyUsername, ttl);
+
+        var keyEmail = $"{RedisKeyPrefixUserEmail}:{user.Email}";
+        var isEmailMapping = await _cacheRepo.UpdateTtlAsync(keyEmail, ttl);
+        
+        return isUserAdded && isUsernameMapping && isEmailMapping;
+    }
+    
     public async Task<bool> UpdateTtlUserUpdateAsync(RedisUserUpdate updateRequest, TokenType tokenType, TimeSpan ttl)
     {
         var keyBaseEntity = $"{RedisKeyPrefixUpdateUser}:{updateRequest.Id}";
@@ -176,20 +190,11 @@ public class UserRepository : DbRepositoryBase<User>
 
     #region Check
 
-    public async Task<bool> IsUserRegInProgress(Guid id)
-    {
-        var key = $"{RedisKeyPrefixRegUser}:{id}";
-        return await _cacheRepo.KeyExistsAsync(key);
-    }
-
     public async Task<bool> IsUserUpdateInProgress(Guid id)
     {
         var key = $"{RedisKeyPrefixUpdateUser}:{id}";
         return await _cacheRepo.KeyExistsAsync(key);
     }
-
-    public async Task<bool> UserExistsAsync(Guid userId) =>
-        await DbContext.Users.AnyAsync(u => u.Id == userId);
 
     public async Task<bool> UserExistsByUsernameAsync(string username)
     {

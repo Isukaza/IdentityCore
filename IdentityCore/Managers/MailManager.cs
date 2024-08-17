@@ -1,11 +1,11 @@
 using System.Net;
 
+using IdentityCore.Configuration;
+using IdentityCore.DAL.Models;
+
 using Amazon.Runtime;
 using Amazon.SimpleEmailV2;
 using Amazon.SimpleEmailV2.Model;
-
-using IdentityCore.Configuration;
-using IdentityCore.DAL.Models;
 
 namespace IdentityCore.Managers;
 
@@ -23,7 +23,6 @@ public class MailManager
     #region Email Operations
 
     public async Task<string> SendEmailAsync(
-        string fromEmailAddress,
         string toEmailAddress,
         TokenType tokenType,
         string confirmationLink,
@@ -33,7 +32,7 @@ public class MailManager
         var template = GenerateConfirmationContent(tokenType, confirmationLink, user, userUpdate);
         var request = new SendEmailRequest
         {
-            FromEmailAddress = fromEmailAddress,
+            FromEmailAddress = MailConfig.Values.Mail,
             Destination = new Destination { ToAddresses = [toEmailAddress] },
             Content = new EmailContent
             {

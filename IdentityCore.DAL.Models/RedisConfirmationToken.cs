@@ -10,7 +10,7 @@ public record RedisConfirmationToken
     public required string Value { get; set; }
     
     [Required(ErrorMessage = "TokenType is required")]
-    public required TokenType TokenType { get; init; }
+    public required TokenType TokenType { get; set; }
 
     public int AttemptCount { get; set; } = 1;
     
