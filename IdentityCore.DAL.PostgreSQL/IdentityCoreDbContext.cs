@@ -15,24 +15,24 @@ public class IdentityCoreDbContext : DbContext
     private readonly ILogger<IdentityCoreDbContext> _logger;
 
     #endregion
-    
+
     #region C-tor
-    
-    public IdentityCoreDbContext(DbContextOptions<IdentityCoreDbContext> options, ILogger<IdentityCoreDbContext> logger) : base(options)
+
+    public IdentityCoreDbContext(DbContextOptions<IdentityCoreDbContext> options, ILogger<IdentityCoreDbContext> logger)
+        : base(options)
     {
         _logger = logger;
     }
 
     #endregion
-    
+
     #region DbSet
 
     public virtual DbSet<User> Users { get; set; }
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
-    public virtual DbSet<RegistrationToken> RegistrationTokens { get; set; }
 
     #endregion
-    
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         #region Users
@@ -40,7 +40,7 @@ public class IdentityCoreDbContext : DbContext
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Email)
             .IsUnique();
-        
+
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Username)
             .IsUnique();
@@ -56,18 +56,8 @@ public class IdentityCoreDbContext : DbContext
             .OnDelete(DeleteBehavior.Cascade);
 
         #endregion
-        
-        #region Users + RegistrationTokens
-
-        modelBuilder.Entity<RegistrationToken>()
-            .HasOne(rt => rt.User)
-            .WithOne(u => u.RegistrationToken)
-            .HasForeignKey<RegistrationToken>(rt => rt.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        #endregion
     }
-    
+
     #region SaveFnction
 
     public bool SaveAndCompareAffectedRows(bool log = true)
@@ -103,7 +93,7 @@ public class IdentityCoreDbContext : DbContext
                         || e.State == EntityState.Modified
                         || e.State == EntityState.Deleted)
             .ToList();
-        
+
         foreach (var affectedRow in affectedRows)
         {
             var property = affectedRow.Properties.FirstOrDefault(p => p.Metadata.Name == "Modified");
@@ -113,7 +103,7 @@ public class IdentityCoreDbContext : DbContext
 
         return affectedRows;
     }
-    
+
     private bool LogException(DbUpdateException ex)
     {
         _logger.LogInformation("[DB] Exception during saving {ex}", ex);
@@ -127,7 +117,8 @@ public class IdentityCoreDbContext : DbContext
             .Where(f => !string.IsNullOrEmpty(f.GetFileName()))
             .Select(f => $"at {f.GetMethod()} in {f.GetFileName()}:line {f.GetFileLineNumber()}")
             .ToList();
-        _logger.LogInformation("[DB] Exception stacktrace: {Frames}", string.Join(Environment.NewLine, frameDescriptions));
+        _logger
+            .LogInformation("[DB] Exception stacktrace: {Frames}", string.Join(Environment.NewLine, frameDescriptions));
         return false;
     }
 

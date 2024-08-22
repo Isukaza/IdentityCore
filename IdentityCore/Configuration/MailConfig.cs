@@ -1,9 +1,10 @@
 using System.Net;
+using IdentityCore.DAL.Models;
 using Amazon;
 
 namespace IdentityCore.Configuration;
 
-public static class Mail
+public static class MailConfig
 {
     private static class Keys
     {
@@ -17,7 +18,7 @@ public static class Mail
         public const string MinIntervalBetweenAttemptsKey = GroupName + ":MinIntervalBetweenAttempts";
     }
 
-    public static class Configs
+    public static class Values
     {
         public static readonly string Mail;
         public static readonly RegionEndpoint RegionEndpoint;
@@ -27,7 +28,7 @@ public static class Mail
         public static readonly TimeSpan NextAttemptAvailableAfter;
         public static readonly TimeSpan MinIntervalBetweenAttempts;
 
-        static Configs()
+        static Values()
         {
             var configuration = ConfigBase.GetConfiguration();
             Mail = configuration[Keys.MailKey];
@@ -49,23 +50,12 @@ public static class Mail
         }
     }
 
-    public static class Const
+    public static string GetConfirmationLink(string token, TokenType tokenType)
     {
-        public const string Subject = "Confirm Your Registration";
-
-        public static string GetHtmlContent(string username, string confirmationLink) =>
-            $"""
-             <p>Dear {username},</p>
-             <p>Thank you for registering at SkillForge! Please click the link below to confirm your email address and complete your registration:</p>
-             <p><a href='{confirmationLink}'>Confirm your email</a></p>
-             <p>If you did not register for an account, please ignore this email.</p>
-             <p>Best regards,<br>The SkillForge Team</p>
-             """;
-
-        public static string GetConfirmationLink(string token)
-        {
-            var tokenForUrl = WebUtility.UrlEncode(token);
-            return Host.Configs.Host + Host.Configs.RegistrationConfirmationPath + tokenForUrl;
-        }
+        var tokenForUrl = WebUtility.UrlEncode(token);
+        var cfmPath = tokenType == TokenType.RegistrationConfirmation
+            ? HostConfig.Values.RegistrationConfirmationPath
+            : HostConfig.Values.ConfirmationTokenPath;
+        return $"{HostConfig.Values.Host}{cfmPath}?token={tokenForUrl}&tokenType={tokenType}";
     }
 }

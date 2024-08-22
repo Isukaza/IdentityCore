@@ -1,45 +1,91 @@
 using System.Net;
 
+using IdentityCore.Configuration;
+using IdentityCore.DAL.Models;
+
+using Amazon.Runtime;
 using Amazon.SimpleEmailV2;
 using Amazon.SimpleEmailV2.Model;
-
-using IdentityCore.Configuration;
 
 namespace IdentityCore.Managers;
 
 public class MailManager
 {
+    #region Fields
+
     private readonly AmazonSimpleEmailServiceV2Client _sesClient = new(
-        Mail.Configs.AwsAccessKeyId,
-        Mail.Configs.AwsSecretAccessKey,
-        Mail.Configs.RegionEndpoint);
+        MailConfig.Values.AwsAccessKeyId,
+        MailConfig.Values.AwsSecretAccessKey,
+        MailConfig.Values.RegionEndpoint);
+
+    #endregion
+
+    #region Email Operations
 
     public async Task<string> SendEmailAsync(
-        string fromEmailAddress,
         string toEmailAddress,
-        string subject,
-        string htmlContent)
+        TokenType tokenType,
+        string confirmationLink,
+        User user = null,
+        RedisUserUpdate userUpdate = null)
     {
+        var template = GenerateConfirmationContent(tokenType, confirmationLink, user, userUpdate);
         var request = new SendEmailRequest
         {
-            FromEmailAddress = fromEmailAddress,
+            FromEmailAddress = MailConfig.Values.Mail,
             Destination = new Destination { ToAddresses = [toEmailAddress] },
             Content = new EmailContent
             {
-                Simple = new Message
+                Template = new Template
                 {
-                    Subject = new Content { Data = subject },
-                    Body = new Body
-                    {
-                        Html = new Content { Data = htmlContent }
-                    }
+                    TemplateName = tokenType.ToString(),
+                    TemplateData = template
                 }
             }
         };
 
+        return await ExecuteSesRequestAsync(() => _sesClient.SendEmailAsync(request));
+    }
+
+    #endregion
+
+    #region Template
+
+    public async Task<string> CreateTemplate(string templateName, string subject, string htmlContent)
+    {
+        var request = new CreateEmailTemplateRequest
+        {
+            TemplateName = templateName,
+            TemplateContent = new EmailTemplateContent
+            {
+                Subject = subject,
+                Html = htmlContent
+            }
+        };
+
+        return await ExecuteSesRequestAsync(() => _sesClient.CreateEmailTemplateAsync(request));
+    }
+
+    public async Task<string> DeleteTemplate(string templateName)
+    {
+        var request = new DeleteEmailTemplateRequest
+        {
+            TemplateName = templateName
+        };
+
+        return await ExecuteSesRequestAsync(() => _sesClient.DeleteEmailTemplateAsync(request));
+    }
+
+    #endregion
+
+    #region Private Methods
+
+    private static async Task<string> ExecuteSesRequestAsync<T>(Func<Task<T>> action)
+        where T : AmazonWebServiceResponse
+    {
         try
         {
-            var response = await _sesClient.SendEmailAsync(request);
+            var response = await action();
             return response.HttpStatusCode == HttpStatusCode.OK ? string.Empty : response.HttpStatusCode.ToString();
         }
         catch (AccountSuspendedException)
@@ -64,18 +110,52 @@ public class MailManager
         }
 #if DEBUG
         catch (AmazonSimpleEmailServiceV2Exception ex)
+            when (ex.StatusCode == HttpStatusCode.Unauthorized || ex.StatusCode == HttpStatusCode.Forbidden)
         {
-            if (ex.StatusCode == HttpStatusCode.Unauthorized || ex.StatusCode == HttpStatusCode.Forbidden)
-            {
-                return "Invalid security token.";
-            }
+            return "Invalid security token.";
         }
         catch (Exception ex)
         {
-            return $"An error occurred while sending the email: {ex.Message}";
+            return $"An error occurred: {ex.Message}";
         }
 #endif
-
-        return "Unknown error";
     }
+
+    private static string GenerateConfirmationContent(
+        TokenType tokenType,
+        string confirmationLink,
+        User user,
+        RedisUserUpdate userUpdate = null)
+    {
+        return tokenType switch
+        {
+            TokenType.RegistrationConfirmation =>
+                $"{{\"username\":\"{user.Username}\", " +
+                $"\"confirmationLink\":\"{confirmationLink}\"}}",
+
+            TokenType.PasswordChange when userUpdate is not null =>
+                $"{{\"username\":\"{user.Username}\", " +
+                $"\"confirmationLink\":\"{confirmationLink}\"}}",
+
+            TokenType.UsernameChange when userUpdate is not null =>
+                $"{{\"newUsername\":\"{userUpdate.Username}\", " +
+                $"\"oldUsername\":\"{user.Username}\", " +
+                $"\"confirmationLink\":\"{confirmationLink}\"}}",
+
+            TokenType.EmailChangeNew when userUpdate is not null =>
+                $"{{\"username\":\"{user.Username}\", " +
+                $"\"newEmail\":\"{userUpdate.Email}\", " +
+                $"\"confirmationLink\":\"{confirmationLink}\"}}",
+
+            TokenType.EmailChangeOld when userUpdate is not null =>
+                $"{{\"username\":\"{user.Username}\", " +
+                $"\"newEmail\":\"{userUpdate.Email}\", " +
+                $"\"oldEmail\":\"{user.Email}\", " +
+                $"\"confirmationLink\":\"{confirmationLink}\"}}",
+
+            _ => string.Empty
+        };
+    }
+
+    #endregion
 }

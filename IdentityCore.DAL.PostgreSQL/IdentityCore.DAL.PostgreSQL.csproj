@@ -4,6 +4,7 @@
         <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <RootNamespace>IdentityCore.DAL.PorstgreSQL</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
@@ -13,6 +14,7 @@
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
       <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.4" />
+      <PackageReference Include="StackExchange.Redis" Version="2.7.33" />
     </ItemGroup>
     
     <ItemGroup>

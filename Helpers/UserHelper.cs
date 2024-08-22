@@ -40,7 +40,8 @@ public static class UserHelper
     public static string GetToken(Guid id)
     {
         var timestamp = DateTime.UtcNow.ToString("o");
-        return DataHelper.GetHashFromStrings(timestamp, id.ToString());
+        var randomString = DataHelper.GenerateString();
+        return DataHelper.GetHashFromStrings(timestamp, id.ToString(), randomString);
     }
 
     #endregion

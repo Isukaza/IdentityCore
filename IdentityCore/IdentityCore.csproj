@@ -19,7 +19,9 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+        <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.3" />
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.4" />
+        <PackageReference Include="StackExchange.Redis" Version="2.7.33" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
     </ItemGroup>
 
@@ -32,7 +34,7 @@
     <ItemGroup>
       <ProjectReference Include="..\Helpers\Helpers.csproj" />
       <ProjectReference Include="..\IdentityCore.DAL.Models\IdentityCore.DAL.Models.csproj" />
-      <ProjectReference Include="..\IdentityCore.DAL.PorstgreSQL\IdentityCore.DAL.PorstgreSQL.csproj" />
+      <ProjectReference Include="..\IdentityCore.DAL.PostgreSQL\IdentityCore.DAL.PostgreSQL.csproj" />
       <ProjectReference Include="..\IdentityCore.DAL.Repositories\IdentityCore.DAL.Repositories.csproj" />
     </ItemGroup>
     

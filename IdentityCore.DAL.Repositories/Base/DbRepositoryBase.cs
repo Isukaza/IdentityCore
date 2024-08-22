@@ -59,7 +59,7 @@ public abstract class DbRepositoryBase<T>
         return await DbContext.SaveAndCompareAffectedRowsAsync();
     }
 
-    public async Task<bool> SaveAsync() =>
+    protected async Task<bool> SaveAsync() =>
         await DbContext.SaveAndCompareAffectedRowsAsync();
 
     #endregion

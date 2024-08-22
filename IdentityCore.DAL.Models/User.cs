@@ -25,7 +25,6 @@ public record User : BaseDbEntity
     #region Relational
 
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new HashSet<RefreshToken>();
-    public RegistrationToken? RegistrationToken { get; set; }
-
+    
     #endregion
 }

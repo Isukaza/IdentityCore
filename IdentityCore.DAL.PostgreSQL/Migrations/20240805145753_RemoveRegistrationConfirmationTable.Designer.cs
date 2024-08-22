@@ -3,6 +3,7 @@ using System;
 using IdentityCore.DAL.PorstgreSQL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IdentityCore.DAL.PorstgreSQL.Migrations
 {
     [DbContext(typeof(IdentityCoreDbContext))]
-    partial class IdentityCoreDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240805145753_RemoveRegistrationConfirmationTable")]
+    partial class RemoveRegistrationConfirmationTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -48,38 +51,6 @@ namespace IdentityCore.DAL.PorstgreSQL.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("RefreshTokens");
-                });
-
-            modelBuilder.Entity("IdentityCore.DAL.Models.RegistrationToken", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("AttemptCount")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("Created")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("Expires")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("Modified")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("RegToken")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("RegistrationTokens");
                 });
 
             modelBuilder.Entity("IdentityCore.DAL.Models.User", b =>
@@ -136,22 +107,9 @@ namespace IdentityCore.DAL.PorstgreSQL.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("IdentityCore.DAL.Models.RegistrationToken", b =>
-                {
-                    b.HasOne("IdentityCore.DAL.Models.User", "User")
-                        .WithOne("RegistrationTokens")
-                        .HasForeignKey("IdentityCore.DAL.Models.RegistrationToken", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("IdentityCore.DAL.Models.User", b =>
                 {
                     b.Navigation("RefreshTokens");
-
-                    b.Navigation("RegistrationTokens");
                 });
 #pragma warning restore 612, 618
         }
