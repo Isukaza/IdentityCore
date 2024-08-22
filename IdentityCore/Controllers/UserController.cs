@@ -34,6 +34,14 @@ public class UserController : Controller
 
     #region CRUD
 
+    /// <summary>
+    /// Retrieves user information by user ID.
+    /// </summary>
+    /// <param name="useId">The unique identifier of the user.</param>
+    /// <returns>Returns the user information if found.</returns>
+    /// <response code="200">User information retrieved successfully.</response>
+    /// <response code="401">Unauthorized. The user is not authenticated.</response>
+    /// <response code="404">User with the specified ID not found.</response>
     [HttpGet("{useId:guid}")]
     [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetUser(Guid useId)
@@ -44,6 +52,14 @@ public class UserController : Controller
             : await StatusCodes.Status404NotFound.ResultState($"User by id:{useId} not found");
     }
 
+    /// <summary>
+    /// Registers a new user in the system.
+    /// </summary>
+    /// <param name="userCreateRequest">An object containing the user's registration details.</param>
+    /// <returns>Returns the status of the operation, including the user ID and token type.</returns>
+    /// <response code="201">User registration successful, awaiting email confirmation.</response>
+    /// <response code="400">Invalid registration data or email could not be sent.</response>
+    /// <response code="500">An error occurred during user registration.</response>
     [AllowAnonymous]
     [HttpPost("registration")]
     [ProducesResponseType(typeof(ReSendCfmTokenResponse), StatusCodes.Status201Created)]
@@ -76,6 +92,16 @@ public class UserController : Controller
             : await StatusCodes.Status400BadRequest.ResultState("Not send mail");
     }
 
+    /// <summary>
+    /// Updates the details of an existing user.
+    /// </summary>
+    /// <param name="updateRequest">The new details of the user.</param>
+    /// <returns>Returns the status of the update.</returns>
+    /// <response code="200">User updated successfully, awaiting email confirmation.</response>
+    /// <response code="400">The update data provided is invalid.</response>
+    /// <response code="401">Unauthorized. The user is not authenticated.</response>
+    /// <response code="429">A user update is already in progress.</response>
+    /// <response code="500">An error occurred during the user update.</response>
     [HttpPut("update")]
     [ProducesResponseType(typeof(ReSendCfmTokenResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> UpdateUser([FromBody] UserUpdateRequest updateRequest)
@@ -110,6 +136,18 @@ public class UserController : Controller
             : await StatusCodes.Status500InternalServerError.ResultState("Not send mail");
     }
 
+    /// <summary>
+    /// Sends a confirmation email for a new email address change.
+    /// </summary>
+    /// <remarks>
+    /// This method should be called only after the old email address has been confirmed during the email change process.
+    /// </remarks>
+    /// <param name="userId">The unique identifier of the user.</param>
+    /// <returns>Returns the status of the email confirmation process.</returns>
+    /// <response code="200">Confirmation email sent successfully.</response>
+    /// <response code="400">The provided token or user data is invalid.</response>
+    /// <response code="401">Unauthorized. The user is not authenticated.</response>
+    /// <response code="500">An error occurred during the email confirmation process.</response>
     [HttpGet("send-new-email-confirmation")]
     [ProducesResponseType(typeof(ReSendCfmTokenResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> SendNewEmailConfirmation([Required] Guid userId)
@@ -140,6 +178,15 @@ public class UserController : Controller
             : await StatusCodes.Status500InternalServerError.ResultState(sendMailError);
     }
 
+    /// <summary>
+    /// Deletes an existing user.
+    /// </summary>
+    /// <param name="userId">The unique identifier of the user to be deleted.</param>
+    /// <returns>Returns the status of the deletion.</returns>
+    /// <response code="200">User deleted successfully.</response>
+    /// <response code="401">Unauthorized. The user is not authenticated.</response>
+    /// <response code="404">The user with the specified ID was not found.</response>
+    /// <response code="500">An error occurred during the user deletion.</response>
     [HttpDelete("delete")]
     [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
     public async Task<IActionResult> DeleteUser(Guid userId)
@@ -157,6 +204,14 @@ public class UserController : Controller
 
     #region Confirmation action
 
+    /// <summary>
+    /// Confirms a registration token.
+    /// </summary>
+    /// <param name="tokenRequest">The token request details.</param>
+    /// <returns>Returns the status of the token confirmation.</returns>
+    /// <response code="200">Token confirmed successfully.</response>
+    /// <response code="400">The provided token is invalid.</response>
+    /// <response code="500">An error occurred during token confirmation.</response>
     [AllowAnonymous]
     [HttpGet("cfm-reg-token")]
     public async Task<IActionResult> ConfirmationRegToken([FromQuery] CfmTokenRequest tokenRequest)
@@ -164,12 +219,29 @@ public class UserController : Controller
         return await HandleTokenConfirmation(tokenRequest, true);
     }
 
+    /// <summary>
+    /// Confirms a token.
+    /// </summary>
+    /// <param name="tokenRequest">The token request details.</param>
+    /// <returns>Returns the status of the token confirmation.</returns>
+    /// <response code="200">Token confirmed successfully.</response>
+    /// <response code="400">The provided token is invalid.</response>
+    /// <response code="401">Unauthorized. The user is not authenticated.</response>
+    /// <response code="500">An error occurred during token confirmation.</response>
     [HttpGet("cfm-token")]
     public async Task<IActionResult> ConfirmationToken([FromQuery] CfmTokenRequest tokenRequest)
     {
         return await HandleTokenConfirmation(tokenRequest, false);
     }
 
+    /// <summary>
+    /// Resends a registration confirmation token.
+    /// </summary>
+    /// <param name="tokenRequest">The token request details.</param>
+    /// <returns>Returns the status of the token resend process.</returns>
+    /// <response code="200">Token resent successfully.</response>
+    /// <response code="400">The provided token or user data is invalid.</response>
+    /// <response code="500">An error occurred during the token resend process.</response>
     [AllowAnonymous]
     [HttpPost("resend-cfm-reg-token")]
     public async Task<IActionResult> ResendCfmRegToken(ReSendCfmTokenRequest tokenRequest)
@@ -177,6 +249,15 @@ public class UserController : Controller
         return await HandleTokenResend(tokenRequest, true);
     }
 
+    /// <summary>
+    /// Resends a confirmation token.
+    /// </summary>
+    /// <param name="tokenRequest">The token request details.</param>
+    /// <returns>Returns the status of the token resend process.</returns>
+    /// <response code="200">Token resent successfully.</response>
+    /// <response code="400">The provided token or user data is invalid.</response>
+    /// <response code="401">Unauthorized. The user is not authenticated.</response>
+    /// <response code="500">An error occurred during the token resend process.</response>
     [HttpPost("resend-cfm-token")]
     public async Task<IActionResult> ResendCfmToken(ReSendCfmTokenRequest tokenRequest)
     {

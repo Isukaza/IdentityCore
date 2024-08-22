@@ -56,7 +56,6 @@ builder.Services.AddDbContext<IdentityCoreDbContext>(options =>
 builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
 {
     var redisConnectionUrl = builder.Configuration.GetConnectionString("RedisConnectionUrl");
-    Console.WriteLine(redisConnectionUrl);
     if (string.IsNullOrEmpty(redisConnectionUrl))
     {
         throw new InvalidOperationException("RedisConnectionUrl is not configured.");
