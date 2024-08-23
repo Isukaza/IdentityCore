@@ -6,6 +6,7 @@ using Helpers;
 using IdentityCore.Configuration;
 using IdentityCore.DAL.Models;
 using IdentityCore.Managers;
+using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models;
 using IdentityCore.Models.Request;
 using IdentityCore.Models.Response;
@@ -19,11 +20,11 @@ public class UserController : Controller
 {
     #region C-tor and fields
 
-    private readonly UserManager _userManager;
-    private readonly MailManager _mailManager;
-    private readonly ConfirmationTokenManager _ctManager;
+    private readonly IUserManager _userManager;
+    private readonly IMailManager _mailManager;
+    private readonly IConfirmationTokenManager _ctManager;
 
-    public UserController(UserManager userManager, MailManager mailManager, ConfirmationTokenManager ctManager)
+    public UserController(IUserManager userManager, IMailManager mailManager, IConfirmationTokenManager ctManager)
     {
         _userManager = userManager;
         _mailManager = mailManager;
@@ -65,7 +66,7 @@ public class UserController : Controller
     [ProducesResponseType(typeof(ReSendCfmTokenResponse), StatusCodes.Status201Created)]
     public async Task<IActionResult> RegistrationUser([FromBody] UserCreateRequest userCreateRequest)
     {
-        var errorMessage = await _userManager.ValidateRegistration(userCreateRequest);
+        var errorMessage = await _userManager.ValidateRegistrationAsync(userCreateRequest);
         if (!string.IsNullOrEmpty(errorMessage))
             return await StatusCodes.Status400BadRequest.ResultState(errorMessage);
 
@@ -106,18 +107,18 @@ public class UserController : Controller
     [ProducesResponseType(typeof(ReSendCfmTokenResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> UpdateUser([FromBody] UserUpdateRequest updateRequest)
     {
-        if (await _userManager.IsUserUpdateInProgress(updateRequest.Id))
+        if (await _userManager.IsUserUpdateInProgressAsync(updateRequest.Id))
             return await StatusCodes.Status429TooManyRequests.ResultState("Complete the current update process");
 
         var result = await _userManager.ValidateUserUpdateAsync(updateRequest);
         if (!result.Success)
             return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
 
-        var tokenType = UserManager.DetermineConfirmationTokenType(updateRequest);
+        var tokenType = _userManager.DetermineConfirmationTokenType(updateRequest);
         if (tokenType is TokenType.Unknown)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
 
-        var redisUserUpdate = _userManager.SaveUserUpdateToRedisAsync(updateRequest, tokenType);
+        var redisUserUpdate = _userManager.SaveUserUpdateToRedis(updateRequest, tokenType);
         if (redisUserUpdate is null)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
 
@@ -266,7 +267,7 @@ public class UserController : Controller
 
     private async Task<IActionResult> HandleTokenConfirmation(CfmTokenRequest tokenRequest, bool isRegistration)
     {
-        if (!ConfirmationTokenManager.ValidateTokenTypeForRequest(tokenRequest.TokenType, isRegistration))
+        if (!_ctManager.ValidateTokenTypeForRequest(tokenRequest.TokenType, isRegistration))
             return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
 
         var tokenDb = await _ctManager.GetTokenAsync(tokenRequest.Token, tokenRequest.TokenType);
@@ -283,7 +284,7 @@ public class UserController : Controller
         if (userUpdateData is null && tokenDb.TokenType != TokenType.RegistrationConfirmation)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
 
-        var executionError = await _userManager.ProcessUserTokenAction(user, userUpdateData, tokenDb);
+        var executionError = await _userManager.ProcessUserTokenActionAsync(user, userUpdateData, tokenDb);
         return string.IsNullOrEmpty(executionError)
             ? await StatusCodes.Status200OK.ResultState("Operation was successfully completed")
             : await StatusCodes.Status500InternalServerError.ResultState(executionError);
@@ -291,14 +292,14 @@ public class UserController : Controller
 
     private async Task<IActionResult> HandleTokenResend(ReSendCfmTokenRequest tokenRequest, bool isRegistration)
     {
-        if (!ConfirmationTokenManager.ValidateTokenTypeForRequest(tokenRequest.TokenType, isRegistration))
+        if (!_ctManager.ValidateTokenTypeForRequest(tokenRequest.TokenType, isRegistration))
             return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
 
         var tokenDb = await _ctManager.GetTokenByUserIdAsync(tokenRequest.UserId, tokenRequest.TokenType);
         if (tokenDb is null)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
 
-        var timeForNextAttempt = ConfirmationTokenManager.GetNextAttemptTime(tokenDb);
+        var timeForNextAttempt = _ctManager.GetNextAttemptTime(tokenDb);
         if (!string.IsNullOrEmpty(timeForNextAttempt))
             return await StatusCodes.Status429TooManyRequests.ResultState(timeForNextAttempt);
 
@@ -314,7 +315,7 @@ public class UserController : Controller
         if (tokenDb.TokenType != TokenType.RegistrationConfirmation && userUpdate == null)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
 
-        var updatedToken = await _ctManager.UpdateCfmToken(tokenDb, user, userUpdate);
+        var updatedToken = await _ctManager.UpdateCfmTokenAsync(tokenDb, user, userUpdate);
         if (updatedToken is null)
             return await StatusCodes.Status500InternalServerError
                 .ResultState("Failed to send verification token");
@@ -323,7 +324,7 @@ public class UserController : Controller
         var email = tokenDb.TokenType == TokenType.EmailChangeNew && userUpdate is not null
             ? userUpdate.Email
             : user.Email;
-        
+
         var sendMailError = await _mailManager.SendEmailAsync(email, tokenDb.TokenType, cfmLink, user, userUpdate);
         return string.IsNullOrEmpty(sendMailError)
             ? await StatusCodes.Status200OK.ResultState("Operation was successfully completed")
@@ -405,7 +406,7 @@ public class UserController : Controller
                 .ResultState("The password must be between 12 and 64 characters long");
 
         var users = UserManager.GenerateUsers(count, password);
-        var result = await _userManager.AddTestUsersToTheDatabase(users);
+        var result = await _userManager.AddTestUsersToTheDatabaseAsync(users);
 
         return result
             ? await StatusCodes.Status200OK.ResultState("Password hash", users)

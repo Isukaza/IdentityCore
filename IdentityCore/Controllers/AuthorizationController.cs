@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 
 using Helpers;
-using IdentityCore.Managers;
+using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models.Request;
 using IdentityCore.Models.Response;
 
@@ -14,10 +14,10 @@ public class AuthorizationController : ControllerBase
 {
     #region C-tor and fields
 
-    private readonly UserManager _userManager;
-    private readonly RefreshTokenManager _refreshTokenManager;
+    private readonly IUserManager _userManager;
+    private readonly IRefreshTokenManager _refreshTokenManager;
 
-    public AuthorizationController(UserManager userManager, RefreshTokenManager refreshTokenManager)
+    public AuthorizationController(IUserManager userManager, IRefreshTokenManager refreshTokenManager)
     {
         _userManager = userManager;
         _refreshTokenManager = refreshTokenManager;
@@ -38,11 +38,11 @@ public class AuthorizationController : ControllerBase
     [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Login([FromBody] UserLoginRequest loginRequest)
     {
-        var result = await _userManager.ValidateLogin(loginRequest);
+        var result = await _userManager.ValidateLoginAsync(loginRequest);
         if (!result.Success)
             return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
 
-        var loginResponse = await _userManager.CreateLoginTokens(result.Data);
+        var loginResponse = await _userManager.CreateLoginTokensAsync(result.Data);
         return loginResponse.Success
             ? await StatusCodes.Status200OK.ResultState("Successful login", loginResponse.Data)
             : await StatusCodes.Status500InternalServerError.ResultState(loginResponse.ErrorMessage);
@@ -61,12 +61,12 @@ public class AuthorizationController : ControllerBase
     public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest refreshTokenRequest)
     {
         var result = await _refreshTokenManager
-            .ValidationRefreshToken(refreshTokenRequest.UserId, refreshTokenRequest.RefreshToken);
+            .ValidationRefreshTokenAsync(refreshTokenRequest.UserId, refreshTokenRequest.RefreshToken);
 
         if (!result.Success)
             return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
 
-        var loginResponse = await _userManager.RefreshLoginTokens(result.Data);
+        var loginResponse = await _userManager.RefreshLoginTokensAsync(result.Data);
         return loginResponse.Success
             ? await StatusCodes.Status200OK.ResultState("Successful login refresh", loginResponse.Data)
             : await StatusCodes.Status400BadRequest.ResultState(loginResponse.ErrorMessage);
@@ -84,7 +84,7 @@ public class AuthorizationController : ControllerBase
     [Authorize]
     public async Task<IActionResult> Logout([FromBody] LogoutRequest logoutRequest)
     {
-        var errorMessage = await _userManager.Logout(logoutRequest.UserId, logoutRequest.RefreshToken);
+        var errorMessage = await _userManager.LogoutAsync(logoutRequest.UserId, logoutRequest.RefreshToken);
         return string.IsNullOrEmpty(errorMessage)
             ? await StatusCodes.Status200OK.ResultState()
             : await StatusCodes.Status400BadRequest.ResultState(errorMessage);

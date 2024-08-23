@@ -1,9 +1,10 @@
 using System.Text.Json;
+using IdentityCore.DAL.Repository.Interfaces.Base;
 using StackExchange.Redis;
 
-namespace IdentityCore.DAL.Repository.Base;
+namespace IdentityCore.DAL.Repository.Repositories.Base;
 
-public class CacheRepositoryBase
+public class CacheRepositoryBase : ICacheRepositoryBase
 {
     private readonly IDatabase _cache;
 
@@ -12,16 +13,16 @@ public class CacheRepositoryBase
         _cache = multiplexer.GetDatabase();
     }
 
-    public bool Add<T>(string key, T value, TimeSpan ttl)
-    {
-        var json = JsonSerializer.Serialize(value);
-        return _cache.StringSet(key, json, ttl);
-    }
-
     public async Task<T> GetAsync<T>(string key)
     {
         var value = await _cache.StringGetAsync(key);
         return value.HasValue ? JsonSerializer.Deserialize<T>(value) : default;
+    }
+
+    public bool Add<T>(string key, T value, TimeSpan ttl)
+    {
+        var json = JsonSerializer.Serialize(value);
+        return _cache.StringSet(key, json, ttl);
     }
 
     public async Task<bool> UpdateAsync<T>(string key, T value, TimeSpan expiry)

@@ -5,27 +5,28 @@ using Microsoft.IdentityModel.Tokens;
 using Helpers;
 using IdentityCore.Configuration;
 using IdentityCore.DAL.Models;
-using IdentityCore.DAL.Repository;
+using IdentityCore.DAL.Repository.Interfaces;
+using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models;
 using IdentityCore.Models.Request;
 using IdentityCore.Models.Response;
 
 namespace IdentityCore.Managers;
 
-public class UserManager
+public class UserManager : IUserManager
 {
     #region C-tor and fields
 
-    private readonly UserRepository _userRepo;
-    private readonly RefreshTokenRepository _refTokenRepo;
-    private readonly ConfirmationTokenRepository _ctRepo;
+    private readonly IUserRepository _userRepo;
+    private readonly IRefreshTokenRepository _refTokenRepo;
+    private readonly IConfirmationTokenRepository _ctRepo;
 
-    private readonly RefreshTokenManager _refTokenManager;
+    private readonly IRefreshTokenManager _refTokenManager;
 
-    public UserManager(UserRepository userRepo,
-        RefreshTokenRepository refTokenRepo,
-        ConfirmationTokenRepository ctRepo,
-        RefreshTokenManager refTokenManager)
+    public UserManager(IUserRepository userRepo,
+        IRefreshTokenRepository refTokenRepo,
+        IConfirmationTokenRepository ctRepo,
+        IRefreshTokenManager refTokenManager)
     {
         _userRepo = userRepo;
         _refTokenRepo = refTokenRepo;
@@ -70,8 +71,8 @@ public class UserManager
 
     public async Task<RedisUserUpdate> GetUpdateUserFromRedisByIdAsync(Guid id) =>
         await _userRepo.GetUpdateUserFromRedisByIdAsync(id);
-    
-    public RedisUserUpdate SaveUserUpdateToRedisAsync(UserUpdateRequest updateRequest, TokenType tokenType)
+
+    public RedisUserUpdate SaveUserUpdateToRedis(UserUpdateRequest updateRequest, TokenType tokenType)
     {
         var redisUserUpdate = new RedisUserUpdate
         {
@@ -120,10 +121,10 @@ public class UserManager
         return new JwtSecurityTokenHandler().WriteToken(jwt);
     }
 
-    public async Task<OperationResult<LoginResponse>> CreateLoginTokens(User user)
+    public async Task<OperationResult<LoginResponse>> CreateLoginTokensAsync(User user)
     {
-        var refreshToken = RefreshTokenManager.CreateRefreshToken(user);
-        if (!await _refTokenManager.AddToken(user, refreshToken))
+        var refreshToken = _refTokenManager.CreateRefreshToken(user);
+        if (!await _refTokenManager.AddTokenAsync(user, refreshToken))
             return new OperationResult<LoginResponse>("Error creating session");
 
         var loginResponse = new LoginResponse
@@ -136,9 +137,9 @@ public class UserManager
         return new OperationResult<LoginResponse>(loginResponse);
     }
 
-    public async Task<OperationResult<LoginResponse>> RefreshLoginTokens(RefreshToken token)
+    public async Task<OperationResult<LoginResponse>> RefreshLoginTokensAsync(RefreshToken token)
     {
-        var updatedToken = await _refTokenManager.UpdateTokenDb(token);
+        var updatedToken = await _refTokenManager.UpdateTokenDbAsync(token);
         if (string.IsNullOrWhiteSpace(updatedToken))
             return new OperationResult<LoginResponse>("Invalid operation");
 
@@ -152,7 +153,7 @@ public class UserManager
         return new OperationResult<LoginResponse>(loginResponse);
     }
 
-    public async Task<string> Logout(Guid userId, string refreshToken)
+    public async Task<string> LogoutAsync(Guid userId, string refreshToken)
     {
         var token = await _refTokenRepo.GetTokenByUserIdAsync(userId, refreshToken);
         if (token is null)
@@ -163,7 +164,7 @@ public class UserManager
             : "Error during deletion";
     }
 
-    public static TokenType DetermineConfirmationTokenType(UserUpdateRequest updateRequest)
+    public TokenType DetermineConfirmationTokenType(UserUpdateRequest updateRequest)
     {
         if (!string.IsNullOrWhiteSpace(updateRequest.Username))
             return TokenType.UsernameChange;
@@ -176,7 +177,7 @@ public class UserManager
             : TokenType.Unknown;
     }
 
-    public async Task<string> ProcessUserTokenAction(
+    public async Task<string> ProcessUserTokenActionAsync(
         User user,
         RedisUserUpdate userUpdate,
         RedisConfirmationToken token)
@@ -222,7 +223,7 @@ public class UserManager
             : new OperationResult<User>(user);
     }
 
-    public async Task<OperationResult<User>> ValidateLogin(UserLoginRequest loginRequest)
+    public async Task<OperationResult<User>> ValidateLoginAsync(UserLoginRequest loginRequest)
     {
         if (string.IsNullOrWhiteSpace(loginRequest.Email) || string.IsNullOrWhiteSpace(loginRequest.Password))
             return new OperationResult<User>("Email or password is invalid");
@@ -238,7 +239,7 @@ public class UserManager
             : new OperationResult<User>("Email or password is invalid");
     }
 
-    public async Task<string> ValidateRegistration(UserCreateRequest userCreateRequest)
+    public async Task<string> ValidateRegistrationAsync(UserCreateRequest userCreateRequest)
     {
         if (string.IsNullOrWhiteSpace(userCreateRequest.Email)
             || string.IsNullOrWhiteSpace(userCreateRequest.Username)
@@ -254,7 +255,7 @@ public class UserManager
         return string.Empty;
     }
 
-    public async Task<bool> IsUserUpdateInProgress(Guid id) =>
+    public async Task<bool> IsUserUpdateInProgressAsync(Guid id) =>
         await _userRepo.IsUserUpdateInProgress(id);
 
     #endregion
@@ -364,7 +365,7 @@ public class UserManager
             .ToList();
     }
 
-    public async Task<bool> AddTestUsersToTheDatabase(List<TestUserResponse> users)
+    public async Task<bool> AddTestUsersToTheDatabaseAsync(List<TestUserResponse> users)
     {
         if (users.Count == 0)
             return false;

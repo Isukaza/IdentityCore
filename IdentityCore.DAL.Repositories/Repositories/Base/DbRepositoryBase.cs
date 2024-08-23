@@ -1,9 +1,10 @@
-using IdentityCore.DAL.PorstgreSQL;
 using IdentityCore.DAL.Models.Base;
+using IdentityCore.DAL.PorstgreSQL;
+using IdentityCore.DAL.Repository.Interfaces.Base;
 
-namespace IdentityCore.DAL.Repository.Base;
+namespace IdentityCore.DAL.Repository.Repositories.Base;
 
-public abstract class DbRepositoryBase<T>
+public abstract class DbRepositoryBase<T> : IDbRepositoryBase<T>
     where T : BaseDbEntity
 {
     #region Fields and c-tor
@@ -59,7 +60,7 @@ public abstract class DbRepositoryBase<T>
         return await DbContext.SaveAndCompareAffectedRowsAsync();
     }
 
-    protected async Task<bool> SaveAsync() =>
+    public async Task<bool> SaveAsync() =>
         await DbContext.SaveAndCompareAffectedRowsAsync();
 
     #endregion

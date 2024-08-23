@@ -1,11 +1,12 @@
-using IdentityCore.DAL.PorstgreSQL;
 using IdentityCore.DAL.Models;
-using IdentityCore.DAL.Repository.Base;
+using IdentityCore.DAL.PorstgreSQL;
+using IdentityCore.DAL.Repository.Interfaces;
+using IdentityCore.DAL.Repository.Repositories.Base;
 using Microsoft.EntityFrameworkCore;
 
-namespace IdentityCore.DAL.Repository;
+namespace IdentityCore.DAL.Repository.Repositories;
 
-public class RefreshTokenRepository : DbRepositoryBase<RefreshToken>
+public class RefreshTokenRepository : DbRepositoryBase<RefreshToken>, IRefreshTokenRepository
 {
     #region C-tor
 
@@ -14,18 +15,18 @@ public class RefreshTokenRepository : DbRepositoryBase<RefreshToken>
 
     #endregion
 
-    public async Task<int> GetCountUserTokens(Guid id) =>
+    public async Task<int> GetCountUserTokensAsync(Guid id) =>
         await DbContext.RefreshTokens.CountAsync(rt => rt.UserId == id);
-    
-    private IQueryable<RefreshToken> GetUserTokens(Guid id) =>
-        DbContext.RefreshTokens.Where(rt => rt.UserId == id);
-    
+
     public async Task<RefreshToken> GetTokenByUserIdAsync(Guid userId, string token) =>
         await DbContext.RefreshTokens
             .Include(u => u.User)
             .FirstOrDefaultAsync(refT => refT.UserId == userId && refT.RefToken == token);
 
-    public async Task DeleteOldestSession(Guid id)
+    private IQueryable<RefreshToken> GetUserTokens(Guid id) =>
+        DbContext.RefreshTokens.Where(rt => rt.UserId == id);
+
+    public async Task DeleteOldestSessionAsync(Guid id)
     {
         var rTokens = GetUserTokens(id);
 
