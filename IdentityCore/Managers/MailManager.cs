@@ -6,10 +6,11 @@ using IdentityCore.DAL.Models;
 using Amazon.Runtime;
 using Amazon.SimpleEmailV2;
 using Amazon.SimpleEmailV2.Model;
+using IdentityCore.Managers.Interfaces;
 
 namespace IdentityCore.Managers;
 
-public class MailManager
+public class MailManager : IMailManager
 {
     #region Fields
 

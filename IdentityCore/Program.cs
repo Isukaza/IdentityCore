@@ -8,10 +8,13 @@ using Microsoft.OpenApi.Models;
 
 using IdentityCore.DAL.PorstgreSQL;
 using IdentityCore.DAL.Repository;
-using IdentityCore.DAL.Repository.Base;
 using IdentityCore.Configuration;
+using IdentityCore.DAL.Repository.Interfaces;
+using IdentityCore.DAL.Repository.Interfaces.Base;
+using IdentityCore.DAL.Repository.Repositories;
+using IdentityCore.DAL.Repository.Repositories.Base;
 using IdentityCore.Managers;
-
+using IdentityCore.Managers.Interfaces;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -64,15 +67,15 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
     return ConnectionMultiplexer.Connect(redisConnectionUrl);
 });
 
-builder.Services.AddScoped<UserRepository>();
-builder.Services.AddScoped<RefreshTokenRepository>();
-builder.Services.AddScoped<CacheRepositoryBase>();
-builder.Services.AddScoped<ConfirmationTokenRepository>();
+builder.Services.AddScoped<ICacheRepositoryBase, CacheRepositoryBase>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+builder.Services.AddScoped<IConfirmationTokenRepository, ConfirmationTokenRepository>();
 
-builder.Services.AddScoped<UserManager>();
-builder.Services.AddScoped<RefreshTokenManager>();
-builder.Services.AddScoped<ConfirmationTokenManager>();
-builder.Services.AddScoped<MailManager>();
+builder.Services.AddScoped<IUserManager, UserManager>();
+builder.Services.AddScoped<IRefreshTokenManager, RefreshTokenManager>();
+builder.Services.AddScoped<IConfirmationTokenManager, ConfirmationTokenManager>();
+builder.Services.AddScoped<IMailManager, MailManager>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>

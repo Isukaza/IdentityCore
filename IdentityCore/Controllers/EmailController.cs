@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 
 using Helpers;
-using IdentityCore.Managers;
+using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models.Request;
 
 namespace IdentityCore.Controllers;
@@ -13,9 +13,9 @@ public class EmailController : Controller
 {
     #region C-tor and fields
 
-    private readonly MailManager _mailManager;
+    private readonly IMailManager _mailManager;
 
-    public EmailController(MailManager mailManager)
+    public EmailController(IMailManager mailManager)
     {
         _mailManager = mailManager;
     }

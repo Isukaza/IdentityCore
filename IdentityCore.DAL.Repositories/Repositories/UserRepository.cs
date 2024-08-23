@@ -1,11 +1,13 @@
-using Microsoft.EntityFrameworkCore;
-using IdentityCore.DAL.PorstgreSQL;
 using IdentityCore.DAL.Models;
-using IdentityCore.DAL.Repository.Base;
+using IdentityCore.DAL.PorstgreSQL;
+using IdentityCore.DAL.Repository.Interfaces;
+using IdentityCore.DAL.Repository.Interfaces.Base;
+using IdentityCore.DAL.Repository.Repositories.Base;
+using Microsoft.EntityFrameworkCore;
 
-namespace IdentityCore.DAL.Repository;
+namespace IdentityCore.DAL.Repository.Repositories;
 
-public class UserRepository : DbRepositoryBase<User>
+public class UserRepository : DbRepositoryBase<User>, IUserRepository
 {
     #region C-tor and fields
 
@@ -14,9 +16,9 @@ public class UserRepository : DbRepositoryBase<User>
     private const string RedisKeyPrefixUserName = "Username";
     private const string RedisKeyPrefixUserEmail = "Email";
 
-    private readonly CacheRepositoryBase _cacheRepo;
+    private readonly ICacheRepositoryBase _cacheRepo;
 
-    public UserRepository(IdentityCoreDbContext dbContext, CacheRepositoryBase cacheRepo) : base(dbContext)
+    public UserRepository(IdentityCoreDbContext dbContext, ICacheRepositoryBase cacheRepo) : base(dbContext)
     {
         _cacheRepo = cacheRepo;
     }
@@ -158,10 +160,10 @@ public class UserRepository : DbRepositoryBase<User>
 
         var keyEmail = $"{RedisKeyPrefixUserEmail}:{user.Email}";
         var isEmailMapping = await _cacheRepo.UpdateTtlAsync(keyEmail, ttl);
-        
+
         return isUserAdded && isUsernameMapping && isEmailMapping;
     }
-    
+
     public async Task<bool> UpdateTtlUserUpdateAsync(RedisUserUpdate updateRequest, TokenType tokenType, TimeSpan ttl)
     {
         var keyBaseEntity = $"{RedisKeyPrefixUpdateUser}:{updateRequest.Id}";
