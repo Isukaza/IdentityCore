@@ -1,11 +1,8 @@
 using Helpers;
 using IdentityCore.Configuration;
 using IdentityCore.DAL.Models;
-using IdentityCore.DAL.Repository;
 using IdentityCore.DAL.Repository.Interfaces;
-using IdentityCore.DAL.Repository.Repositories;
 using IdentityCore.Managers.Interfaces;
-using IdentityCore.Models.Request;
 
 namespace IdentityCore.Managers;
 
