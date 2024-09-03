@@ -12,6 +12,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdentityCore.DAL.Repositori
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdentityCore.DAL.Models", "IdentityCore.DAL.Models\IdentityCore.DAL.Models.csproj", "{84343902-B367-49AB-B3C2-2E177043864B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdentityCore.Tests", "IdentityCore.Tests\IdentityCore.Tests.csproj", "{0E1F401B-6E94-4DBB-AD3D-2CBE84DF8199}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -38,6 +40,10 @@ Global
 		{84343902-B367-49AB-B3C2-2E177043864B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{84343902-B367-49AB-B3C2-2E177043864B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{84343902-B367-49AB-B3C2-2E177043864B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0E1F401B-6E94-4DBB-AD3D-2CBE84DF8199}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0E1F401B-6E94-4DBB-AD3D-2CBE84DF8199}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0E1F401B-6E94-4DBB-AD3D-2CBE84DF8199}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0E1F401B-6E94-4DBB-AD3D-2CBE84DF8199}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{974729CE-CC94-4D7C-9213-755AE212030C} = {3EFC65D2-F483-4968-9B1A-FEF9D38B689E}

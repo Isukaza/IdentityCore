@@ -42,12 +42,26 @@ public class UserRepository : DbRepositoryBase<User>, IUserRepository
     public async Task<User> GetUserByIdAsync(Guid id) =>
         await DbContext.Users.FirstOrDefaultAsync(u => u.Id == id);
 
-    public async Task<User> GetUserByUsernameAsync(string username) =>
-        await DbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.Username, username));
+    public async Task<User> GetUserByUsernameAsync(string username)
+    {
+        if (DbContext.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
+            return await DbContext.Users
+                .FirstOrDefaultAsync(u => u.Username.Equals(username, StringComparison.CurrentCultureIgnoreCase));
 
-    public async Task<User> GetUserByEmailAsync(string email) =>
-        await DbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.Email, email));
+        return await DbContext.Users
+            .FirstOrDefaultAsync(u => EF.Functions.ILike(u.Username, username));
+    }
 
+    public async Task<User> GetUserByEmailAsync(string email)
+    {
+        if (DbContext.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
+            return await DbContext.Users
+                .FirstOrDefaultAsync(u => u.Email.Equals(email, StringComparison.CurrentCultureIgnoreCase));
+
+        return await DbContext.Users
+            .FirstOrDefaultAsync(u => EF.Functions.ILike(u.Email, email));
+    }
+    
     #endregion
 
     #region Add
