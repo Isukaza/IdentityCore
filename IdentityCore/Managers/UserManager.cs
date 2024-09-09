@@ -55,7 +55,8 @@ public class UserManager : IUserManager
             Username = userCreateRequest.Username,
             Email = userCreateRequest.Email,
             Salt = salt,
-            Password = UserHelper.GetPasswordHash(userCreateRequest.Password, salt)
+            Password = UserHelper.GetPasswordHash(userCreateRequest.Password, salt),
+            Provider = Provider.Local
         };
 
         return _userRepo.AddRegUserToRedis(user, TokenConfig.Values.RegistrationConfirmation) ? user : null;
@@ -380,7 +381,8 @@ public class UserManager : IUserManager
                 Username = user.Username,
                 Email = user.Email,
                 Salt = salt,
-                Password = UserHelper.GetPasswordHash(user.Password, salt)
+                Password = UserHelper.GetPasswordHash(user.Password, salt),
+                Provider = Provider.Local
             };
         });
 

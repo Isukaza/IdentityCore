@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using IdentityCore.DAL.Models;
+using IdentityCore.DAL.Models.enums;
 
 namespace IdentityCore.Tests.Helpers;
 
@@ -19,6 +20,7 @@ public static class TestDbEntityBuilder
                 Email = $"{username}@example.com",
                 Password = TestDataHelper.GetPasswordHash(password, salt),
                 Salt = salt,
+                Provider = Provider.Local,
                 IsActive = true
             };
 
