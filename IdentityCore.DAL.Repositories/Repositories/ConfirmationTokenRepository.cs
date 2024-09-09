@@ -1,4 +1,5 @@
 using IdentityCore.DAL.Models;
+using IdentityCore.DAL.Models.enums;
 using IdentityCore.DAL.Repository.Interfaces;
 using IdentityCore.DAL.Repository.Interfaces.Base;
 

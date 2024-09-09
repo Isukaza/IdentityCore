@@ -1,6 +1,7 @@
 using Helpers;
 using IdentityCore.Configuration;
 using IdentityCore.DAL.Models;
+using IdentityCore.DAL.Models.enums;
 using IdentityCore.DAL.Repository.Interfaces;
 using IdentityCore.Managers.Interfaces;
 

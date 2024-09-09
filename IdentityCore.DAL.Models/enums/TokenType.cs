@@ -1,4 +1,4 @@
-namespace IdentityCore.DAL.Models;
+namespace IdentityCore.DAL.Models.enums;
 
 public enum TokenType
 {

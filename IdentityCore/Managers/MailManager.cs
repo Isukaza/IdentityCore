@@ -6,6 +6,7 @@ using IdentityCore.DAL.Models;
 using Amazon.Runtime;
 using Amazon.SimpleEmailV2;
 using Amazon.SimpleEmailV2.Model;
+using IdentityCore.DAL.Models.enums;
 using IdentityCore.Managers.Interfaces;
 
 namespace IdentityCore.Managers;
