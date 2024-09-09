@@ -10,7 +10,7 @@ public interface IUserManager
 {
     Task<User> GetUserByIdAsync(Guid id);
     Task<User> GetRegUserFromRedisByIdAsync(Guid id);
-    User CreateUserForRegistration(UserCreateRequest userCreateRequest);
+    Task<User> CreateUserForRegistration(UserCreateRequest userCreateRequest, Provider provider);
     Task<bool> DeleteUserAsync(User user);
 
     Task<RedisUserUpdate> GetUpdateUserFromRedisByIdAsync(Guid id);

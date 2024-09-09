@@ -46,19 +46,28 @@ public class UserManager : IUserManager
     public async Task<User> GetRegUserFromRedisByIdAsync(Guid id) =>
         await _userRepo.GetRegUserFromRedisByIdAsync(id);
 
-    public User CreateUserForRegistration(UserCreateRequest userCreateRequest)
+    public async Task<User> CreateUserForRegistration(UserCreateRequest userCreateRequest, Provider provider)
     {
-        var salt = UserHelper.GenerateSalt();
         var user = new User
         {
             Id = Guid.NewGuid(),
             Username = userCreateRequest.Username,
             Email = userCreateRequest.Email,
-            Salt = salt,
-            Password = UserHelper.GetPasswordHash(userCreateRequest.Password, salt),
-            Provider = Provider.Local
+            Password = null,
+            Salt = null,
+            Provider = provider
         };
 
+        if (provider != Provider.Local)
+        {
+            user.IsActive = true;
+            return await _userRepo.CreateAsync(user);
+        }
+
+        user.Salt = UserHelper.GenerateSalt();
+        user.Password = UserHelper.GetPasswordHash(userCreateRequest.Password, user.Salt);
+        user.IsActive = false;
+            
         return _userRepo.AddRegUserToRedis(user, TokenConfig.Values.RegistrationConfirmation) ? user : null;
     }
 

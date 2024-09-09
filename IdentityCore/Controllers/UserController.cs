@@ -70,7 +70,7 @@ public class UserController : Controller
         if (!string.IsNullOrEmpty(errorMessage))
             return await StatusCodes.Status400BadRequest.ResultState(errorMessage);
 
-        var user = _userManager.CreateUserForRegistration(userCreateRequest);
+        var user = await _userManager.CreateUserForRegistration(userCreateRequest, Provider.Local);
         if (user is null)
             return await StatusCodes.Status500InternalServerError.ResultState("Error creating user");
 
