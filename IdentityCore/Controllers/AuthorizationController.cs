@@ -16,11 +16,16 @@ public class AuthorizationController : ControllerBase
 
     private readonly IUserManager _userManager;
     private readonly IRefreshTokenManager _refreshTokenManager;
+    private readonly IGoogleManager _googleManager;
 
-    public AuthorizationController(IUserManager userManager, IRefreshTokenManager refreshTokenManager)
+    public AuthorizationController(
+        IUserManager userManager,
+        IRefreshTokenManager refreshTokenManager,
+        IGoogleManager googleManager)
     {
         _userManager = userManager;
         _refreshTokenManager = refreshTokenManager;
+        _googleManager = googleManager;
     }
 
     #endregion
@@ -46,6 +51,25 @@ public class AuthorizationController : ControllerBase
         return loginResponse.Success
             ? await StatusCodes.Status200OK.ResultState("Successful login", loginResponse.Data)
             : await StatusCodes.Status500InternalServerError.ResultState(loginResponse.ErrorMessage);
+    }
+
+    [HttpGet("google-login")]
+    public IActionResult GoogleLogin()
+    {
+        var authorizationUrl = _googleManager.GenerateGoogleLoginUrl();
+        return Redirect(authorizationUrl);
+    }
+
+    [HttpGet("google-callback")]
+    public async Task<IActionResult> GoogleCallback(string code)
+    {
+        var tokenResponse = await _googleManager.ExchangeCodeForTokenAsync(code);
+        var payload = await _googleManager.VerifyGoogleTokenAsync(tokenResponse.IdToken);
+        if (payload == null)
+            return BadRequest("Invalid Google token.");
+        
+        //stub
+        return Ok(new { Email = payload.Email, Name = payload.Name });
     }
 
     /// <summary>
