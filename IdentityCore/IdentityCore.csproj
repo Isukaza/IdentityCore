@@ -14,6 +14,7 @@
 
     <ItemGroup>
         <PackageReference Include="AWSSDK.SimpleEmailV2" Version="3.7.400" />
+        <PackageReference Include="Google.Apis.Auth" Version="1.68.0" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.7" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.6">
             <PrivateAssets>all</PrivateAssets>
