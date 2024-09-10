@@ -2,12 +2,10 @@
 using Microsoft.AspNetCore.Mvc;
 
 using Helpers;
-using IdentityCore.DAL.Models;
 using IdentityCore.DAL.Models.enums;
 using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models.Request;
 using IdentityCore.Models.Response;
-using Microsoft.EntityFrameworkCore.Storage;
 
 namespace IdentityCore.Controllers;
 
@@ -88,23 +86,14 @@ public class AuthorizationController : ControllerBase
         if (payload == null)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid Google token.");
 
-        User user;
-        if (await _userManager.UserExistsByEmailAsync(payload.Email))
-        {
-            user = await _userManager.GetUserByEmailAsync(payload.Email);
-            if (user.Provider == Provider.Local
-                && !await _userManager.UpdateUserProviderAsync(user, Provider.GoogleWithPass))
-                return await StatusCodes.Status500InternalServerError.ResultState("Error updating user");
-        }
-        else
-        {
-            var username = await _userManager.GenerateUniqueUsernameAsync(payload.Name);
-            user = await _userManager.CreateUserForRegistrationAsync(username, payload.Email, Provider.Google);
-            if (user is null)
-                return await StatusCodes.Status500InternalServerError.ResultState("Error creating user");
-        }
-        
-        var loginResponse = await _userManager.CreateLoginTokensAsync(user);
+        var userSso = await _userManager.UserExistsByEmailAsync(payload.Email)
+            ? await _userManager.GetUserSsoAsync(payload.Email)
+            : await _userManager.CreateUserSsoAsync(payload.Email, payload.Name, Provider.Google);
+
+        if (!userSso.Success)
+            return await StatusCodes.Status500InternalServerError.ResultState(userSso.ErrorMessage);
+
+        var loginResponse = await _userManager.CreateLoginTokensAsync(userSso.Data);
         return loginResponse.Success
             ? await StatusCodes.Status200OK.ResultState("Successful login", loginResponse.Data)
             : await StatusCodes.Status500InternalServerError.ResultState(loginResponse.ErrorMessage);
