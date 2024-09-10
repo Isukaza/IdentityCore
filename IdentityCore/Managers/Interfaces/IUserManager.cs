@@ -25,13 +25,9 @@ public interface IUserManager
     TokenType DetermineConfirmationTokenType(UserUpdateRequest updateRequest);
     Task<string> ProcessUserTokenActionAsync(User user, RedisUserUpdate userUpdate, RedisConfirmationToken token);
 
-
-    Task<string> GenerateUniqueUsernameAsync(string username);
     Task<bool> UserExistsByEmailAsync(string email);
     Task<OperationResult<User>> ValidateUserUpdateAsync(UserUpdateRequest updateData);
     Task<OperationResult<User>> ValidateLoginAsync(UserLoginRequest loginRequest);
     Task<string> ValidateRegistrationAsync(UserCreateRequest userCreateRequest);
     Task<bool> IsUserUpdateInProgressAsync(Guid id);
-
-    Task<bool> AddTestUsersToTheDatabaseAsync(List<TestUserResponse> users);
 }
