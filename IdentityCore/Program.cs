@@ -73,6 +73,7 @@ builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IConfirmationTokenRepository, ConfirmationTokenRepository>();
 
 builder.Services.AddScoped<IUserManager, UserManager>();
+builder.Services.AddScoped<IAuthenticationManager, AuthenticationManager>();
 builder.Services.AddScoped<IRefreshTokenManager, RefreshTokenManager>();
 builder.Services.AddScoped<IConfirmationTokenManager, ConfirmationTokenManager>();
 builder.Services.AddScoped<IMailManager, MailManager>();

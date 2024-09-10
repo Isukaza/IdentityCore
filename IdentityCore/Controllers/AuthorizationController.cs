@@ -17,15 +17,18 @@ public class AuthorizationController : ControllerBase
     #region C-tor and fields
 
     private readonly IUserManager _userManager;
+    private readonly IAuthenticationManager _authenticationManager;
     private readonly IRefreshTokenManager _refreshTokenManager;
     private readonly IGoogleManager _googleManager;
 
     public AuthorizationController(
         IUserManager userManager,
+        IAuthenticationManager authenticationManager,
         IRefreshTokenManager refreshTokenManager,
         IGoogleManager googleManager)
     {
         _userManager = userManager;
+        _authenticationManager = authenticationManager;
         _refreshTokenManager = refreshTokenManager;
         _googleManager = googleManager;
     }
@@ -49,7 +52,7 @@ public class AuthorizationController : ControllerBase
         if (!result.Success)
             return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
 
-        var loginResponse = await _userManager.CreateLoginTokensAsync(result.Data);
+        var loginResponse = await _authenticationManager.CreateLoginTokensAsync(result.Data);
         return loginResponse.Success
             ? await StatusCodes.Status200OK.ResultState("Successful login", loginResponse.Data)
             : await StatusCodes.Status500InternalServerError.ResultState(loginResponse.ErrorMessage);
@@ -93,7 +96,7 @@ public class AuthorizationController : ControllerBase
         if (!userSso.Success)
             return await StatusCodes.Status500InternalServerError.ResultState(userSso.ErrorMessage);
 
-        var loginResponse = await _userManager.CreateLoginTokensAsync(userSso.Data);
+        var loginResponse = await _authenticationManager.CreateLoginTokensAsync(userSso.Data);
         return loginResponse.Success
             ? await StatusCodes.Status200OK.ResultState("Successful login", loginResponse.Data)
             : await StatusCodes.Status500InternalServerError.ResultState(loginResponse.ErrorMessage);
@@ -117,7 +120,7 @@ public class AuthorizationController : ControllerBase
         if (!result.Success)
             return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
 
-        var loginResponse = await _userManager.RefreshLoginTokensAsync(result.Data);
+        var loginResponse = await _authenticationManager.RefreshLoginTokensAsync(result.Data);
         return loginResponse.Success
             ? await StatusCodes.Status200OK.ResultState("Successful login refresh", loginResponse.Data)
             : await StatusCodes.Status400BadRequest.ResultState(loginResponse.ErrorMessage);
@@ -134,7 +137,7 @@ public class AuthorizationController : ControllerBase
     [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Logout([FromBody] LogoutRequest logoutRequest)
     {
-        var errorMessage = await _userManager.LogoutAsync(logoutRequest.UserId, logoutRequest.RefreshToken);
+        var errorMessage = await _authenticationManager.LogoutAsync(logoutRequest.UserId, logoutRequest.RefreshToken);
         return string.IsNullOrEmpty(errorMessage)
             ? await StatusCodes.Status200OK.ResultState()
             : await StatusCodes.Status400BadRequest.ResultState(errorMessage);

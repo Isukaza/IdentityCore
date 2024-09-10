@@ -19,9 +19,6 @@ public interface IUserManager
     RedisUserUpdate SaveUserUpdateToRedis(UserUpdateRequest updateRequest, TokenType tokenType);
     Task<bool> DeleteRegisteredUserFromRedisAsync(User user);
 
-    Task<OperationResult<LoginResponse>> CreateLoginTokensAsync(User user);
-    Task<OperationResult<LoginResponse>> RefreshLoginTokensAsync(RefreshToken token);
-    Task<string> LogoutAsync(Guid userId, string refreshToken);
     TokenType DetermineConfirmationTokenType(UserUpdateRequest updateRequest);
     Task<string> ProcessUserTokenActionAsync(User user, RedisUserUpdate userUpdate, RedisConfirmationToken token);
 

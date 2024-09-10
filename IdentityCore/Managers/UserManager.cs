@@ -147,67 +147,6 @@ public class UserManager : IUserManager
 
     #region Token Management
 
-    private static string CreateJwt(User user)
-    {
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new(ClaimTypes.Role, "Admin")
-        };
-
-        var jwt = new JwtSecurityToken(
-            issuer: Jwt.Configs.Issuer,
-            audience: Jwt.Configs.Audience,
-            claims: claims,
-            expires: DateTime.UtcNow.Add(Jwt.Configs.Expires),
-            signingCredentials: new SigningCredentials(Jwt.Configs.Key, SecurityAlgorithms.HmacSha256));
-
-        return new JwtSecurityTokenHandler().WriteToken(jwt);
-    }
-
-    public async Task<OperationResult<LoginResponse>> CreateLoginTokensAsync(User user)
-    {
-        var refreshToken = _refTokenManager.CreateRefreshToken(user);
-        if (!await _refTokenManager.AddTokenAsync(user, refreshToken))
-            return new OperationResult<LoginResponse>("Error creating session");
-
-        var loginResponse = new LoginResponse
-        {
-            UserId = user.Id,
-            Bearer = CreateJwt(user),
-            RefreshToken = refreshToken.RefToken
-        };
-
-        return new OperationResult<LoginResponse>(loginResponse);
-    }
-
-    public async Task<OperationResult<LoginResponse>> RefreshLoginTokensAsync(RefreshToken token)
-    {
-        var updatedToken = await _refTokenManager.UpdateTokenDbAsync(token);
-        if (string.IsNullOrWhiteSpace(updatedToken))
-            return new OperationResult<LoginResponse>("Invalid operation");
-
-        var loginResponse = new LoginResponse
-        {
-            UserId = token.UserId,
-            Bearer = CreateJwt(token.User),
-            RefreshToken = updatedToken
-        };
-
-        return new OperationResult<LoginResponse>(loginResponse);
-    }
-
-    public async Task<string> LogoutAsync(Guid userId, string refreshToken)
-    {
-        var token = await _refTokenRepo.GetTokenByUserIdAsync(userId, refreshToken);
-        if (token is null)
-            return "The user was not found or was deleted";
-
-        return await _refTokenRepo.DeleteAsync(token)
-            ? string.Empty
-            : "Error during deletion";
-    }
-
     public TokenType DetermineConfirmationTokenType(UserUpdateRequest updateRequest)
     {
         if (!string.IsNullOrWhiteSpace(updateRequest.Username))
