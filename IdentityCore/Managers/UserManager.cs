@@ -162,19 +162,18 @@ public class UserManager : IUserManager
 
     #region Validation
 
-    public async Task<string> GenerateUniqueUsernameAsync(string username)
-    {
-        username = username.Replace(" ", "_");
-        if (!await _userRepo.UserExistsByUsernameAsync(username))
-            return username;
+    public async Task<bool> IsUserUpdateInProgressAsync(Guid id) =>
+        await _userRepo.IsUserUpdateInProgress(id);
 
-        var random = new Random();
-        do
-        {
-            var newUsername = $"{username}_{random.Next(0, 10000):D4}";
-            if (!await _userRepo.UserExistsByUsernameAsync(newUsername))
-                return newUsername;
-        } while (true);
+    private static bool IsSingleFieldProvided(UserUpdateRequest updateRequest)
+    {
+        var filledFieldsCount = 0;
+
+        if (!string.IsNullOrWhiteSpace(updateRequest.Username)) filledFieldsCount++;
+        if (!string.IsNullOrWhiteSpace(updateRequest.Email)) filledFieldsCount++;
+        if (!string.IsNullOrWhiteSpace(updateRequest.OldPassword)) filledFieldsCount++;
+
+        return filledFieldsCount == 1;
     }
 
     public async Task<bool> UserExistsByEmailAsync(string email) =>
@@ -238,9 +237,6 @@ public class UserManager : IUserManager
 
         return string.Empty;
     }
-
-    public async Task<bool> IsUserUpdateInProgressAsync(Guid id) =>
-        await _userRepo.IsUserUpdateInProgress(id);
 
     #endregion
 
@@ -324,14 +320,22 @@ public class UserManager : IUserManager
 
     #endregion
 
-    private static bool IsSingleFieldProvided(UserUpdateRequest updateRequest)
+    #region Common
+
+    private async Task<string> GenerateUniqueUsernameAsync(string username)
     {
-        var filledFieldsCount = 0;
+        username = username.Replace(" ", "_");
+        if (!await _userRepo.UserExistsByUsernameAsync(username))
+            return username;
 
-        if (!string.IsNullOrWhiteSpace(updateRequest.Username)) filledFieldsCount++;
-        if (!string.IsNullOrWhiteSpace(updateRequest.Email)) filledFieldsCount++;
-        if (!string.IsNullOrWhiteSpace(updateRequest.OldPassword)) filledFieldsCount++;
-
-        return filledFieldsCount == 1;
+        var random = new Random();
+        do
+        {
+            var newUsername = $"{username}_{random.Next(0, 10000):D4}";
+            if (!await _userRepo.UserExistsByUsernameAsync(newUsername))
+                return newUsername;
+        } while (true);
     }
+
+    #endregion
 }
