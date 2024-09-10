@@ -4,9 +4,9 @@ using Microsoft.IdentityModel.Tokens;
 
 using Helpers;
 using IdentityCore.Configuration;
-using IdentityCore.DAL.Models;
-using IdentityCore.DAL.Models.enums;
-using IdentityCore.DAL.Repository.Interfaces;
+using IdentityCore.DAL.PostgreSQL.Models;
+using IdentityCore.DAL.PostgreSQL.Models.enums;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
 using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models;
 using IdentityCore.Models.Request;

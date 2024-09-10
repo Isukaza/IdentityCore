@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace IdentityCore.DAL.Models;
+namespace IdentityCore.DAL.PostgreSQL.Models;
 
 public record RedisUserUpdate
 {

@@ -1,4 +1,4 @@
-namespace IdentityCore.DAL.Models.enums;
+namespace IdentityCore.DAL.PostgreSQL.Models.enums;
 
 public enum TokenType
 {

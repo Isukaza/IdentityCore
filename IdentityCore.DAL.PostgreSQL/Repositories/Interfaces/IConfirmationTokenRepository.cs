@@ -1,7 +1,7 @@
-using IdentityCore.DAL.Models;
-using IdentityCore.DAL.Models.enums;
+using IdentityCore.DAL.PostgreSQL.Models;
+using IdentityCore.DAL.PostgreSQL.Models.enums;
 
-namespace IdentityCore.DAL.Repository.Interfaces;
+namespace IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
 
 public interface IConfirmationTokenRepository
 {

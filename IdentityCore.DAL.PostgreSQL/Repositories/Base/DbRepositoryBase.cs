@@ -1,8 +1,7 @@
-using IdentityCore.DAL.Models.Base;
-using IdentityCore.DAL.PorstgreSQL;
-using IdentityCore.DAL.Repository.Interfaces.Base;
+using IdentityCore.DAL.PostgreSQL.Models.Base;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.Base;
 
-namespace IdentityCore.DAL.Repository.Repositories.Base;
+namespace IdentityCore.DAL.PostgreSQL.Repositories.Base;
 
 public abstract class DbRepositoryBase<T> : IDbRepositoryBase<T>
     where T : BaseDbEntity

@@ -1,10 +1,9 @@
-using IdentityCore.DAL.Models;
-using IdentityCore.DAL.PorstgreSQL;
-using IdentityCore.DAL.Repository.Interfaces;
-using IdentityCore.DAL.Repository.Repositories.Base;
 using Microsoft.EntityFrameworkCore;
+using IdentityCore.DAL.PostgreSQL.Models;
+using IdentityCore.DAL.PostgreSQL.Repositories.Base;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
 
-namespace IdentityCore.DAL.Repository.Repositories;
+namespace IdentityCore.DAL.PostgreSQL.Repositories;
 
 public class RefreshTokenRepository : DbRepositoryBase<RefreshToken>, IRefreshTokenRepository
 {

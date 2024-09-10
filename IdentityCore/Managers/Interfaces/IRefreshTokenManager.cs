@@ -1,4 +1,4 @@
-using IdentityCore.DAL.Models;
+using IdentityCore.DAL.PostgreSQL.Models;
 using IdentityCore.Models;
 
 namespace IdentityCore.Managers.Interfaces;

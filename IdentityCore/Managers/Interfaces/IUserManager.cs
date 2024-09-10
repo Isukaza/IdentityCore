@@ -1,5 +1,5 @@
-using IdentityCore.DAL.Models;
-using IdentityCore.DAL.Models.enums;
+using IdentityCore.DAL.PostgreSQL.Models;
+using IdentityCore.DAL.PostgreSQL.Models.enums;
 using IdentityCore.Models;
 using IdentityCore.Models.Request;
 using IdentityCore.Models.Response;

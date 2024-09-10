@@ -9,8 +9,8 @@ using Microsoft.Extensions.DependencyInjection;
 using JetBrains.Annotations;
 
 using IdentityCore.Controllers;
-using IdentityCore.DAL.Models;
-using IdentityCore.DAL.PorstgreSQL;
+using IdentityCore.DAL.PostgreSQL;
+using IdentityCore.DAL.PostgreSQL.Models;
 using IdentityCore.Models.Request;
 
 using Moq;

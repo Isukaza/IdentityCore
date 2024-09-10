@@ -1,8 +1,8 @@
-using IdentityCore.DAL.Models;
-using IdentityCore.DAL.Models.enums;
-using IdentityCore.DAL.Repository.Interfaces.Base;
+using IdentityCore.DAL.PostgreSQL.Models;
+using IdentityCore.DAL.PostgreSQL.Models.enums;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.Base;
 
-namespace IdentityCore.DAL.Repository.Interfaces;
+namespace IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
 
 public interface IUserRepository : IDbRepositoryBase<User>
 {

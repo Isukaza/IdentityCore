@@ -1,4 +1,4 @@
-using IdentityCore.DAL.Models.enums;
+using IdentityCore.DAL.PostgreSQL.Models.enums;
 
 namespace IdentityCore.Configuration;
 

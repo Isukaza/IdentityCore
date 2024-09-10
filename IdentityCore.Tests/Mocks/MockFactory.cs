@@ -8,11 +8,11 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-using IdentityCore.DAL.PorstgreSQL;
-using IdentityCore.DAL.Repository.Interfaces;
-using IdentityCore.DAL.Repository.Interfaces.Base;
-using IdentityCore.DAL.Repository.Repositories;
-using IdentityCore.DAL.Repository.Repositories.Base;
+using IdentityCore.DAL.PostgreSQL;
+using IdentityCore.DAL.PostgreSQL.Repositories;
+using IdentityCore.DAL.PostgreSQL.Repositories.Base;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.Base;
 using IdentityCore.Managers;
 using IdentityCore.Managers.Interfaces;
 

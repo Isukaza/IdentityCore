@@ -1,12 +1,10 @@
 using System.Diagnostics;
-
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.Logging;
+using IdentityCore.DAL.PostgreSQL.Models;
 
-using IdentityCore.DAL.Models;
-
-namespace IdentityCore.DAL.PorstgreSQL;
+namespace IdentityCore.DAL.PostgreSQL;
 
 public class IdentityCoreDbContext : DbContext
 {

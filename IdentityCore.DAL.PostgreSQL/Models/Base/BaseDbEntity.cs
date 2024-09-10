@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace IdentityCore.DAL.Models.Base;
+namespace IdentityCore.DAL.PostgreSQL.Models.Base;
 
 public abstract record BaseDbEntity
 {

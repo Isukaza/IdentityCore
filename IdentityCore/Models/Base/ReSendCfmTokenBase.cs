@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using IdentityCore.DAL.Models.enums;
+using IdentityCore.DAL.PostgreSQL.Models.enums;
 
 namespace IdentityCore.Models.Base;
 

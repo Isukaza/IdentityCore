@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace IdentityCore.DAL.PorstgreSQL.Migrations
+namespace IdentityCore.DAL.PostgreSQL.Migrations
 {
     /// <inheritdoc />
     public partial class AddAuthProviderToUser : Migration

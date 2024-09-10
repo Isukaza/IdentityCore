@@ -1,5 +1,5 @@
 using System.Net;
-using IdentityCore.DAL.Models.enums;
+using IdentityCore.DAL.PostgreSQL.Models.enums;
 using Amazon;
 
 namespace IdentityCore.Configuration;
