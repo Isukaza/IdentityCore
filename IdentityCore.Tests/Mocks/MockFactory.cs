@@ -1,3 +1,5 @@
+using Google.Apis.Auth;
+using Google.Apis.Auth.OAuth2.Responses;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -33,7 +35,7 @@ public static class MockFactory
 
         return controller;
     }
-    
+
     public static Mock<HttpContext> GetHttpContextMock()
     {
         var httpContextMock = new Mock<HttpContext> { CallBase = true };
@@ -48,25 +50,26 @@ public static class MockFactory
         httpContextMock
             .Setup(context => context.Request)
             .Returns(requestMock.Object);
-        
+
         httpContextMock
             .Setup(context => context.RequestServices)
             .Returns(serviceCollection.BuildServiceProvider());
 
         return httpContextMock;
     }
-    
+
     private static ServiceCollection GetDependencies()
     {
         var services = new ServiceCollection();
-        
+
         services.AddLogging();
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        services.AddDbContext<IdentityCoreDbContext>(options => options.UseInMemoryDatabase("TestDatabase"));
+
+        services
+            .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
-                options.TokenValidationParameters = MockSettings.CreateJwtBearerOptionsMock().TokenValidationParameters);
-        
-        services.AddDbContext<IdentityCoreDbContext>(options =>
-            options.UseInMemoryDatabase("TestDatabase"));
+                options.TokenValidationParameters =
+                    MockSettings.CreateJwtBearerOptionsMock().TokenValidationParameters);
 
         services.AddSingleton(_ =>
         {
@@ -75,7 +78,29 @@ public static class MockFactory
             mockMultiplexer
                 .Setup(m => m.GetDatabase(It.IsAny<int>(), It.IsAny<object>()))
                 .Returns(mockDatabase.Object);
+
             return mockMultiplexer.Object;
+        });
+
+        services.AddSingleton(_ =>
+        {
+            var mockGoogleManager = new Mock<IGoogleManager>();
+            mockGoogleManager
+                .Setup(g => g.ExchangeCodeForTokenAsync(It.IsAny<string>()))
+                .ReturnsAsync(new TokenResponse
+                {
+                    IdToken = "id_token"
+                });
+
+            mockGoogleManager
+                .Setup(g => g.VerifyGoogleTokenAsync(It.IsAny<string>()))
+                .ReturnsAsync(new GoogleJsonWebSignature.Payload
+                {
+                    Email = "test@test.com",
+                    Name = "test"
+                });
+
+            return mockGoogleManager.Object;
         });
 
         services.AddScoped<IUserRepository, UserRepository>();

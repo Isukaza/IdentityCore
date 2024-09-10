@@ -103,6 +103,17 @@ public class AuthorizationControllerTest
         Assert.That(response, Is.Not.Null);
         Assert.That(response.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
     }
+    
+    [Test]
+    public async Task LoginSSO_NewUser_ReturnsOK()
+    {
+        // Act
+        var response = await _controller.GoogleCallback("") as ObjectResult;
+
+        // Assert
+        Assert.That(response, Is.Not.Null);
+        Assert.That(response.StatusCode, Is.EqualTo(StatusCodes.Status200OK));
+    }
 
     [Test]
     public async Task Refresh_ValidCredentials_ReturnsOk()
