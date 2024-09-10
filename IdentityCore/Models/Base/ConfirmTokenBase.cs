@@ -1,6 +1,6 @@
 using Microsoft.Build.Framework;
 using Helpers.ValidationAttributes;
-using IdentityCore.DAL.Models.enums;
+using IdentityCore.DAL.PostgreSQL.Models.enums;
 
 namespace IdentityCore.Models.Base;
 

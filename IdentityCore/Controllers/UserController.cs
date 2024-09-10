@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 using Helpers;
 using IdentityCore.Configuration;
-using IdentityCore.DAL.Models.enums;
+using IdentityCore.DAL.PostgreSQL.Models.enums;
 using IdentityCore.Managers;
 using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models;

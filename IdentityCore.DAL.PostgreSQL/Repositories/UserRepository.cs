@@ -1,12 +1,11 @@
-using IdentityCore.DAL.Models;
-using IdentityCore.DAL.Models.enums;
-using IdentityCore.DAL.PorstgreSQL;
-using IdentityCore.DAL.Repository.Interfaces;
-using IdentityCore.DAL.Repository.Interfaces.Base;
-using IdentityCore.DAL.Repository.Repositories.Base;
 using Microsoft.EntityFrameworkCore;
+using IdentityCore.DAL.PostgreSQL.Models;
+using IdentityCore.DAL.PostgreSQL.Models.enums;
+using IdentityCore.DAL.PostgreSQL.Repositories.Base;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.Base;
 
-namespace IdentityCore.DAL.Repository.Repositories;
+namespace IdentityCore.DAL.PostgreSQL.Repositories;
 
 public class UserRepository : DbRepositoryBase<User>, IUserRepository
 {

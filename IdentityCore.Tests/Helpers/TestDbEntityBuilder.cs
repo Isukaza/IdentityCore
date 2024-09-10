@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using IdentityCore.DAL.Models;
-using IdentityCore.DAL.Models.enums;
+using IdentityCore.DAL.PostgreSQL.Models;
+using IdentityCore.DAL.PostgreSQL.Models.enums;
 
 namespace IdentityCore.Tests.Helpers;
 

@@ -1,4 +1,4 @@
-namespace IdentityCore.DAL.Repository.Interfaces.Base;
+namespace IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.Base;
 
 public interface ICacheRepositoryBase
 {

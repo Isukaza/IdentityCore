@@ -1,8 +1,8 @@
 using System.Text.Json;
-using IdentityCore.DAL.Repository.Interfaces.Base;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.Base;
 using StackExchange.Redis;
 
-namespace IdentityCore.DAL.Repository.Repositories.Base;
+namespace IdentityCore.DAL.PostgreSQL.Repositories.Base;
 
 public class CacheRepositoryBase : ICacheRepositoryBase
 {

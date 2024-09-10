@@ -3,8 +3,7 @@
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <RootNamespace>IdentityCore.DAL.PorstgreSQL</RootNamespace>
+        <RootNamespace>IdentityCore.DAL.PostgreSQL</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
@@ -19,10 +18,6 @@
     
     <ItemGroup>
       <Folder Include="Migrations\" />
-    </ItemGroup>
-    
-    <ItemGroup>
-      <ProjectReference Include="..\IdentityCore.DAL.Models\IdentityCore.DAL.Models.csproj" />
     </ItemGroup>
 
 </Project>

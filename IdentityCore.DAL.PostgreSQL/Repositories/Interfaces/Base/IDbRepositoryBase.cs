@@ -1,6 +1,6 @@
-using IdentityCore.DAL.Models.Base;
+using IdentityCore.DAL.PostgreSQL.Models.Base;
 
-namespace IdentityCore.DAL.Repository.Interfaces.Base;
+namespace IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.Base;
 
 public interface IDbRepositoryBase<T>
     where T : BaseDbEntity

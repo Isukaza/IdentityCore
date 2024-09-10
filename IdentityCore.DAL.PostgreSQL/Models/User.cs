@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
-using IdentityCore.DAL.Models.Base;
-using IdentityCore.DAL.Models.enums;
+using IdentityCore.DAL.PostgreSQL.Models.Base;
+using IdentityCore.DAL.PostgreSQL.Models.enums;
 
-namespace IdentityCore.DAL.Models;
+namespace IdentityCore.DAL.PostgreSQL.Models;
 
 public record User : BaseDbEntity
 {

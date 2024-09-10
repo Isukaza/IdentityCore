@@ -1,13 +1,13 @@
 using System.Net;
 
 using IdentityCore.Configuration;
-using IdentityCore.DAL.Models;
+using IdentityCore.DAL.PostgreSQL.Models;
+using IdentityCore.DAL.PostgreSQL.Models.enums;
+using IdentityCore.Managers.Interfaces;
 
 using Amazon.Runtime;
 using Amazon.SimpleEmailV2;
 using Amazon.SimpleEmailV2.Model;
-using IdentityCore.DAL.Models.enums;
-using IdentityCore.Managers.Interfaces;
 
 namespace IdentityCore.Managers;
 
