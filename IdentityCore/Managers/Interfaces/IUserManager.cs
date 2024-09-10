@@ -9,8 +9,11 @@ namespace IdentityCore.Managers.Interfaces;
 public interface IUserManager
 {
     Task<User> GetUserByIdAsync(Guid id);
+    Task<User> GetUserByEmailAsync(string email);
     Task<User> GetRegUserFromRedisByIdAsync(Guid id);
-    Task<User> CreateUserForRegistration(UserCreateRequest userCreateRequest, Provider provider);
+    Task<User> CreateUserForRegistrationAsync(string username, string email, Provider provider);
+    Task<User> CreateUserForRegistrationAsync(UserCreateRequest userCreateRequest, Provider provider);
+    Task<bool> UpdateUserProviderAsync(User user, Provider provider);
     Task<bool> DeleteUserAsync(User user);
 
     Task<RedisUserUpdate> GetUpdateUserFromRedisByIdAsync(Guid id);
@@ -23,7 +26,10 @@ public interface IUserManager
     TokenType DetermineConfirmationTokenType(UserUpdateRequest updateRequest);
     Task<string> ProcessUserTokenActionAsync(User user, RedisUserUpdate userUpdate, RedisConfirmationToken token);
 
-    Task<OperationResult<User>> ValidateUserUpdateAsync(UserUpdateRequest updateRequest);
+    
+    Task<string> GenerateUniqueUsernameAsync(string username);
+    Task<bool> UserExistsByEmailAsync(string email);
+    Task<OperationResult<User>> ValidateUserUpdateAsync(UserUpdateRequest updateData);
     Task<OperationResult<User>> ValidateLoginAsync(UserLoginRequest loginRequest);
     Task<string> ValidateRegistrationAsync(UserCreateRequest userCreateRequest);
     Task<bool> IsUserUpdateInProgressAsync(Guid id);

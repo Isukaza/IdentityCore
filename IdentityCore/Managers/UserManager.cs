@@ -42,11 +42,27 @@ public class UserManager : IUserManager
 
     public async Task<User> GetUserByIdAsync(Guid id) =>
         await _userRepo.GetUserByIdAsync(id);
+    
+    public async Task<User> GetUserByEmailAsync(string email) =>
+        await _userRepo.GetUserByEmailAsync(email);
 
     public async Task<User> GetRegUserFromRedisByIdAsync(Guid id) =>
         await _userRepo.GetRegUserFromRedisByIdAsync(id);
 
-    public async Task<User> CreateUserForRegistration(UserCreateRequest userCreateRequest, Provider provider)
+    public async Task<User> CreateUserForRegistrationAsync(string username, string email, Provider provider)
+    {
+        var userCreate = new UserCreateRequest
+        {
+            Username = username,
+            Email = email,
+            Password = null,
+            ConfirmPassword = null
+        };
+
+        return await CreateUserForRegistrationAsync(userCreate, provider);
+    }
+    
+    public async Task<User> CreateUserForRegistrationAsync(UserCreateRequest userCreateRequest, Provider provider)
     {
         var user = new User
         {
@@ -71,6 +87,12 @@ public class UserManager : IUserManager
         return _userRepo.AddRegUserToRedis(user, TokenConfig.Values.RegistrationConfirmation) ? user : null;
     }
 
+    public async Task<bool> UpdateUserProviderAsync(User user, Provider provider)
+    {
+        user.Provider = provider;
+        return await _userRepo.UpdateAsync(user);
+    }
+    
     public async Task<bool> DeleteUserAsync(User user)
     {
         return user is not null && await _userRepo.DeleteAsync(user);
@@ -208,28 +230,48 @@ public class UserManager : IUserManager
 
     #region Validation
 
-    public async Task<OperationResult<User>> ValidateUserUpdateAsync(UserUpdateRequest updateRequest)
+    public async Task<string> GenerateUniqueUsernameAsync(string username)
     {
-        if (!IsSingleFieldProvided(updateRequest))
+        username = username.Replace(" ", "_");
+        if (!await _userRepo.UserExistsByUsernameAsync(username))
+            return username;
+            
+        var random = new Random();
+        do
+        {
+            var newUsername = $"{username}_{random.Next(0, 10000):D4}";
+            if (!await _userRepo.UserExistsByUsernameAsync(newUsername))
+                return newUsername;
+        } while (true);
+    }
+    
+    public async Task<bool> UserExistsByEmailAsync(string email) => 
+        await _userRepo.UserExistsByEmailAsync(email);
+
+    public async Task<OperationResult<User>> ValidateUserUpdateAsync(UserUpdateRequest updateData)
+    {
+        if (!IsSingleFieldProvided(updateData))
             return new OperationResult<User>("Only one field can be provided for update");
 
-        if (!string.IsNullOrWhiteSpace(updateRequest.Email)
-            && await _userRepo.UserExistsByEmailAsync(updateRequest.Email))
+        if (!string.IsNullOrWhiteSpace(updateData.Email)
+            && await _userRepo.UserExistsByEmailAsync(updateData.Email))
             return new OperationResult<User>("Email is already taken");
 
-        if (!string.IsNullOrWhiteSpace(updateRequest.Username)
-            && await _userRepo.UserExistsByUsernameAsync(updateRequest.Username))
+        if (!string.IsNullOrWhiteSpace(updateData.Username)
+            && await _userRepo.UserExistsByUsernameAsync(updateData.Username))
             return new OperationResult<User>("A user with this username exists");
 
-        var user = await _userRepo.GetUserByIdAsync(updateRequest.Id);
-        if (user is null)
+        var user = await _userRepo.GetUserByIdAsync(updateData.Id);
+        if (user is null 
+            || (user.Provider == Provider.Google && !string.IsNullOrWhiteSpace(updateData.OldPassword))
+            || (user.Provider != Provider.Local && !string.IsNullOrWhiteSpace(updateData.Email)))
             return new OperationResult<User>("Invalid input data");
 
-        if (string.IsNullOrWhiteSpace(updateRequest.OldPassword))
+        if (string.IsNullOrWhiteSpace(updateData.OldPassword))
             return new OperationResult<User>(user);
 
-        var hashCurrentPassword = UserHelper.GetPasswordHash(updateRequest.OldPassword, user.Salt);
-        return hashCurrentPassword != user.Password
+        var hashCurrentPassword = UserHelper.GetPasswordHash(updateData.OldPassword, user.Salt!);
+        return !hashCurrentPassword.Equals(user.Password)
             ? new OperationResult<User>("Invalid input data")
             : new OperationResult<User>(user);
     }
@@ -240,11 +282,10 @@ public class UserManager : IUserManager
             return new OperationResult<User>("Email or password is invalid");
 
         var user = await _userRepo.GetUserByEmailAsync(loginRequest.Email);
-        if (user == null)
+        if (user is null || user.Provider == Provider.Google)
             return new OperationResult<User>("Email or password is invalid");
 
-        var userPasswordHash = UserHelper.GetPasswordHash(loginRequest.Password, user.Salt);
-
+        var userPasswordHash = UserHelper.GetPasswordHash(loginRequest.Password, user.Salt!);
         return userPasswordHash.Equals(user.Password)
             ? new OperationResult<User>(user)
             : new OperationResult<User>("Email or password is invalid");

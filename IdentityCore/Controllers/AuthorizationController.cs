@@ -2,12 +2,16 @@
 using Microsoft.AspNetCore.Mvc;
 
 using Helpers;
+using IdentityCore.DAL.Models;
+using IdentityCore.DAL.Models.enums;
 using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models.Request;
 using IdentityCore.Models.Response;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace IdentityCore.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class AuthorizationController : ControllerBase
@@ -53,6 +57,13 @@ public class AuthorizationController : ControllerBase
             : await StatusCodes.Status500InternalServerError.ResultState(loginResponse.ErrorMessage);
     }
 
+    /// <summary>
+    /// Initiates the Google OAuth2 login process by redirecting the user to Google’s authorization endpoint.
+    /// </summary>
+    /// <returns>Redirects to Google OAuth2 authorization URL.</returns>
+    /// <response code="302">Redirect to Google login page.</response>
+    /// <response code="500">Internal server error if unable to generate Google login URL.</response>
+    [AllowAnonymous]
     [HttpGet("google-login")]
     public IActionResult GoogleLogin()
     {
@@ -60,16 +71,43 @@ public class AuthorizationController : ControllerBase
         return Redirect(authorizationUrl);
     }
 
+    /// <summary>
+    /// Handles the Google OAuth2 callback by exchanging the authorization code for tokens and logging in the user.
+    /// </summary>
+    /// <param name="code">The authorization code received from Google.</param>
+    /// <returns>JWT token and Refresh token.</returns>
+    /// <response code="200">Successful login and token generation.</response>
+    /// <response code="400">Invalid Google token or bad request.</response>
+    /// <response code="500">Error creating or updating user or generating tokens.</response>
+    [AllowAnonymous]
     [HttpGet("google-callback")]
     public async Task<IActionResult> GoogleCallback(string code)
     {
         var tokenResponse = await _googleManager.ExchangeCodeForTokenAsync(code);
         var payload = await _googleManager.VerifyGoogleTokenAsync(tokenResponse.IdToken);
         if (payload == null)
-            return BadRequest("Invalid Google token.");
+            return await StatusCodes.Status400BadRequest.ResultState("Invalid Google token.");
+
+        User user;
+        if (await _userManager.UserExistsByEmailAsync(payload.Email))
+        {
+            user = await _userManager.GetUserByEmailAsync(payload.Email);
+            if (user.Provider == Provider.Local
+                && !await _userManager.UpdateUserProviderAsync(user, Provider.GoogleWithPass))
+                return await StatusCodes.Status500InternalServerError.ResultState("Error updating user");
+        }
+        else
+        {
+            var username = await _userManager.GenerateUniqueUsernameAsync(payload.Name);
+            user = await _userManager.CreateUserForRegistrationAsync(username, payload.Email, Provider.Google);
+            if (user is null)
+                return await StatusCodes.Status500InternalServerError.ResultState("Error creating user");
+        }
         
-        //stub
-        return Ok(new { Email = payload.Email, Name = payload.Name });
+        var loginResponse = await _userManager.CreateLoginTokensAsync(user);
+        return loginResponse.Success
+            ? await StatusCodes.Status200OK.ResultState("Successful login", loginResponse.Data)
+            : await StatusCodes.Status500InternalServerError.ResultState(loginResponse.ErrorMessage);
     }
 
     /// <summary>
@@ -105,7 +143,6 @@ public class AuthorizationController : ControllerBase
     /// <response code="400">Error in tokens or user deleted.</response>
     [HttpPost("logout")]
     [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
-    [Authorize]
     public async Task<IActionResult> Logout([FromBody] LogoutRequest logoutRequest)
     {
         var errorMessage = await _userManager.LogoutAsync(logoutRequest.UserId, logoutRequest.RefreshToken);
