@@ -403,55 +403,6 @@ public class UserManager : IUserManager
 
     #endregion
 
-    #region Test Methods
-
-    public static List<TestUserResponse> GenerateUsers(int count, string password = null)
-    {
-        if (count < 1)
-            return [];
-
-        return Enumerable.Range(0, count)
-            .Select(_ =>
-            {
-                var username = UserHelper.GenerateUsername();
-
-                var user = new TestUserResponse
-                {
-                    Id = Guid.NewGuid(),
-                    Username = username,
-                    Email = UserHelper.GenerateEmail(username),
-                    Password = password ?? UserHelper.GeneratePassword(32)
-                };
-
-                return user;
-            })
-            .ToList();
-    }
-
-    public async Task<bool> AddTestUsersToTheDatabaseAsync(List<TestUserResponse> users)
-    {
-        if (users.Count == 0)
-            return false;
-
-        var usersToAdd = users.Select(user =>
-        {
-            var salt = UserHelper.GenerateSalt();
-            return new User
-            {
-                Id = Guid.NewGuid(),
-                Username = user.Username,
-                Email = user.Email,
-                Salt = salt,
-                Password = UserHelper.GetPasswordHash(user.Password, salt),
-                Provider = Provider.Local
-            };
-        });
-
-        return await _userRepo.AddedRangeAsync(usersToAdd);
-    }
-
-    #endregion
-
     private static bool IsSingleFieldProvided(UserUpdateRequest updateRequest)
     {
         var filledFieldsCount = 0;

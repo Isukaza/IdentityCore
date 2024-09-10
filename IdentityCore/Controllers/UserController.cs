@@ -333,7 +333,7 @@ public class UserController : Controller
 
     #endregion
 
-    #region TestMethods
+    #region CommonMethods
 
 #if DEBUG
 
@@ -378,39 +378,6 @@ public class UserController : Controller
         var passwordHash = UserHelper.GetPasswordHash(password, salt);
 
         return await StatusCodes.Status200OK.ResultState("Password hash", passwordHash);
-    }
-
-    [HttpGet("gen-users")]
-    [ProducesResponseType(typeof(List<TestUserResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GenerateUser(int count)
-    {
-        if (count < 1 || count > 1000)
-            return await StatusCodes.Status400BadRequest
-                .ResultState("The number of users for generation cannot be less than 1 and more than 1000");
-
-        var users = UserManager.GenerateUsers(count);
-
-        return await StatusCodes.Status200OK.ResultState("Password hash", users);
-    }
-
-    [HttpPost("generate-test-database")]
-    [ProducesResponseType(typeof(List<TestUserResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GenerateTestDb(int count, string password)
-    {
-        if (count < 1 || count > 1000)
-            return await StatusCodes.Status400BadRequest
-                .ResultState("The number of users for generation cannot be less than 1 and more than 1000");
-
-        if (string.IsNullOrWhiteSpace(password) || password.Length < 12 || password.Length > 64)
-            return await StatusCodes.Status400BadRequest
-                .ResultState("The password must be between 12 and 64 characters long");
-
-        var users = UserManager.GenerateUsers(count, password);
-        var result = await _userManager.AddTestUsersToTheDatabaseAsync(users);
-
-        return result
-            ? await StatusCodes.Status200OK.ResultState("Password hash", users)
-            : await StatusCodes.Status400BadRequest.ResultState("An error occurred while adding users");
     }
 
 #endif
