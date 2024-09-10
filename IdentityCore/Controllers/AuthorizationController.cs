@@ -2,12 +2,14 @@
 using Microsoft.AspNetCore.Mvc;
 
 using Helpers;
+using IdentityCore.DAL.Models.enums;
 using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models.Request;
 using IdentityCore.Models.Response;
 
 namespace IdentityCore.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class AuthorizationController : ControllerBase
@@ -16,11 +18,16 @@ public class AuthorizationController : ControllerBase
 
     private readonly IUserManager _userManager;
     private readonly IRefreshTokenManager _refreshTokenManager;
+    private readonly IGoogleManager _googleManager;
 
-    public AuthorizationController(IUserManager userManager, IRefreshTokenManager refreshTokenManager)
+    public AuthorizationController(
+        IUserManager userManager,
+        IRefreshTokenManager refreshTokenManager,
+        IGoogleManager googleManager)
     {
         _userManager = userManager;
         _refreshTokenManager = refreshTokenManager;
+        _googleManager = googleManager;
     }
 
     #endregion
@@ -43,6 +50,50 @@ public class AuthorizationController : ControllerBase
             return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
 
         var loginResponse = await _userManager.CreateLoginTokensAsync(result.Data);
+        return loginResponse.Success
+            ? await StatusCodes.Status200OK.ResultState("Successful login", loginResponse.Data)
+            : await StatusCodes.Status500InternalServerError.ResultState(loginResponse.ErrorMessage);
+    }
+
+    /// <summary>
+    /// Initiates the Google OAuth2 login process by redirecting the user to Google’s authorization endpoint.
+    /// </summary>
+    /// <returns>Redirects to Google OAuth2 authorization URL.</returns>
+    /// <response code="302">Redirect to Google login page.</response>
+    /// <response code="500">Internal server error if unable to generate Google login URL.</response>
+    [AllowAnonymous]
+    [HttpGet("google-login")]
+    public IActionResult GoogleLogin()
+    {
+        var authorizationUrl = _googleManager.GenerateGoogleLoginUrl();
+        return Redirect(authorizationUrl);
+    }
+
+    /// <summary>
+    /// Handles the Google OAuth2 callback by exchanging the authorization code for tokens and logging in the user.
+    /// </summary>
+    /// <param name="code">The authorization code received from Google.</param>
+    /// <returns>JWT token and Refresh token.</returns>
+    /// <response code="200">Successful login and token generation.</response>
+    /// <response code="400">Invalid Google token or bad request.</response>
+    /// <response code="500">Error creating or updating user or generating tokens.</response>
+    [AllowAnonymous]
+    [HttpGet("google-callback")]
+    public async Task<IActionResult> GoogleCallback(string code)
+    {
+        var tokenResponse = await _googleManager.ExchangeCodeForTokenAsync(code);
+        var payload = await _googleManager.VerifyGoogleTokenAsync(tokenResponse.IdToken);
+        if (payload == null)
+            return await StatusCodes.Status400BadRequest.ResultState("Invalid Google token.");
+
+        var userSso = await _userManager.UserExistsByEmailAsync(payload.Email)
+            ? await _userManager.GetUserSsoAsync(payload.Email)
+            : await _userManager.CreateUserSsoAsync(payload.Email, payload.Name, Provider.Google);
+
+        if (!userSso.Success)
+            return await StatusCodes.Status500InternalServerError.ResultState(userSso.ErrorMessage);
+
+        var loginResponse = await _userManager.CreateLoginTokensAsync(userSso.Data);
         return loginResponse.Success
             ? await StatusCodes.Status200OK.ResultState("Successful login", loginResponse.Data)
             : await StatusCodes.Status500InternalServerError.ResultState(loginResponse.ErrorMessage);
@@ -81,7 +132,6 @@ public class AuthorizationController : ControllerBase
     /// <response code="400">Error in tokens or user deleted.</response>
     [HttpPost("logout")]
     [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
-    [Authorize]
     public async Task<IActionResult> Logout([FromBody] LogoutRequest logoutRequest)
     {
         var errorMessage = await _userManager.LogoutAsync(logoutRequest.UserId, logoutRequest.RefreshToken);

@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using IdentityCore.DAL.Models.enums;
 
 namespace IdentityCore.DAL.Models;
 

@@ -1,5 +1,5 @@
 using System.Net;
-using IdentityCore.DAL.Models;
+using IdentityCore.DAL.Models.enums;
 using Amazon;
 
 namespace IdentityCore.Configuration;

@@ -7,7 +7,6 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
 using IdentityCore.DAL.PorstgreSQL;
-using IdentityCore.DAL.Repository;
 using IdentityCore.Configuration;
 using IdentityCore.DAL.Repository.Interfaces;
 using IdentityCore.DAL.Repository.Interfaces.Base;
@@ -15,6 +14,7 @@ using IdentityCore.DAL.Repository.Repositories;
 using IdentityCore.DAL.Repository.Repositories.Base;
 using IdentityCore.Managers;
 using IdentityCore.Managers.Interfaces;
+
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -76,6 +76,7 @@ builder.Services.AddScoped<IUserManager, UserManager>();
 builder.Services.AddScoped<IRefreshTokenManager, RefreshTokenManager>();
 builder.Services.AddScoped<IConfirmationTokenManager, ConfirmationTokenManager>();
 builder.Services.AddScoped<IMailManager, MailManager>();
+builder.Services.AddScoped<IGoogleManager, GoogleManager>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>

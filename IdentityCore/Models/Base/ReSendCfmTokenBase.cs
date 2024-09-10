@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using IdentityCore.DAL.Models;
+using IdentityCore.DAL.Models.enums;
 
 namespace IdentityCore.Models.Base;
 

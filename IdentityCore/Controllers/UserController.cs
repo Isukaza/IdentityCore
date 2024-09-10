@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 using Helpers;
 using IdentityCore.Configuration;
-using IdentityCore.DAL.Models;
+using IdentityCore.DAL.Models.enums;
 using IdentityCore.Managers;
 using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models;
@@ -70,7 +70,7 @@ public class UserController : Controller
         if (!string.IsNullOrEmpty(errorMessage))
             return await StatusCodes.Status400BadRequest.ResultState(errorMessage);
 
-        var user = _userManager.CreateUserForRegistration(userCreateRequest);
+        var user = await _userManager.CreateUserForRegistrationAsync(userCreateRequest, Provider.Local);
         if (user is null)
             return await StatusCodes.Status500InternalServerError.ResultState("Error creating user");
 

@@ -1,4 +1,4 @@
-using IdentityCore.DAL.Models;
+using IdentityCore.DAL.Models.enums;
 
 namespace IdentityCore.Configuration;
 
