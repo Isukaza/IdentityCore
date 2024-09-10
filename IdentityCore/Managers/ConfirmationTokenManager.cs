@@ -4,6 +4,7 @@ using IdentityCore.DAL.PostgreSQL.Models;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
 using IdentityCore.Managers.Interfaces;
+using IdentityCore.Models.Request;
 
 namespace IdentityCore.Managers;
 
@@ -40,6 +41,19 @@ public class ConfirmationTokenManager : IConfirmationTokenManager
             ? MailConfig.Values.MinIntervalBetweenAttempts
             : MailConfig.Values.NextAttemptAvailableAfter);
         return nextAvailableTime.ToString("yyyy-MM-ddTHH:mm:ssZ");
+    }
+
+    public TokenType DetermineConfirmationTokenType(UserUpdateRequest updateRequest)
+    {
+        if (!string.IsNullOrWhiteSpace(updateRequest.Username))
+            return TokenType.UsernameChange;
+
+        if (!string.IsNullOrWhiteSpace(updateRequest.NewPassword))
+            return TokenType.PasswordChange;
+
+        return !string.IsNullOrWhiteSpace(updateRequest.Email)
+            ? TokenType.EmailChangeOld
+            : TokenType.Unknown;
     }
 
     public RedisConfirmationToken CreateConfirmationToken(Guid id, TokenType tokenType)

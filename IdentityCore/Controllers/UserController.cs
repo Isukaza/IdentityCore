@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using Helpers;
 using IdentityCore.Configuration;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
-using IdentityCore.Managers;
 using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models;
 using IdentityCore.Models.Request;
@@ -114,7 +113,7 @@ public class UserController : Controller
         if (!result.Success)
             return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
 
-        var tokenType = _userManager.DetermineConfirmationTokenType(updateRequest);
+        var tokenType = _ctManager.DetermineConfirmationTokenType(updateRequest);
         if (tokenType is TokenType.Unknown)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
 

@@ -2,7 +2,6 @@ using IdentityCore.DAL.PostgreSQL.Models;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
 using IdentityCore.Models;
 using IdentityCore.Models.Request;
-using IdentityCore.Models.Response;
 
 namespace IdentityCore.Managers.Interfaces;
 
@@ -19,7 +18,6 @@ public interface IUserManager
     RedisUserUpdate SaveUserUpdateToRedis(UserUpdateRequest updateRequest, TokenType tokenType);
     Task<bool> DeleteRegisteredUserFromRedisAsync(User user);
 
-    TokenType DetermineConfirmationTokenType(UserUpdateRequest updateRequest);
     Task<string> ProcessUserTokenActionAsync(User user, RedisUserUpdate userUpdate, RedisConfirmationToken token);
 
     Task<bool> UserExistsByEmailAsync(string email);

@@ -1,7 +1,3 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using Microsoft.IdentityModel.Tokens;
-
 using Helpers;
 using IdentityCore.Configuration;
 using IdentityCore.DAL.PostgreSQL.Models;
@@ -10,7 +6,6 @@ using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
 using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models;
 using IdentityCore.Models.Request;
-using IdentityCore.Models.Response;
 
 namespace IdentityCore.Managers;
 
@@ -146,19 +141,6 @@ public class UserManager : IUserManager
     #endregion
 
     #region Token Management
-
-    public TokenType DetermineConfirmationTokenType(UserUpdateRequest updateRequest)
-    {
-        if (!string.IsNullOrWhiteSpace(updateRequest.Username))
-            return TokenType.UsernameChange;
-
-        if (!string.IsNullOrWhiteSpace(updateRequest.NewPassword))
-            return TokenType.PasswordChange;
-
-        return !string.IsNullOrWhiteSpace(updateRequest.Email)
-            ? TokenType.EmailChangeOld
-            : TokenType.Unknown;
-    }
 
     public async Task<string> ProcessUserTokenActionAsync(
         User user,
