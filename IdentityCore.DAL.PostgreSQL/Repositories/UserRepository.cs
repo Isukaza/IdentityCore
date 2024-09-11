@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 
 using IdentityCore.DAL.PostgreSQL.Models.cache;
+using IdentityCore.DAL.PostgreSQL.Models.cache.cachePrefix;
 using IdentityCore.DAL.PostgreSQL.Models.db;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
 using IdentityCore.DAL.PostgreSQL.Repositories.Base;
@@ -11,12 +12,7 @@ namespace IdentityCore.DAL.PostgreSQL.Repositories;
 public class UserRepository : DbRepositoryBase<User>, IUserRepository
 {
     #region C-tor and fields
-
-    private const string RedisKeyPrefixRegUser = "UR";
-    private const string RedisKeyPrefixUpdateUser = "UU";
-    private const string RedisKeyPrefixUserName = "Username";
-    private const string RedisKeyPrefixUserEmail = "Email";
-
+    
     private readonly ICacheRepository _cacheRepo;
 
     public UserRepository(IdentityCoreDbContext dbContext, ICacheRepository cacheRepo) : base(dbContext)
@@ -30,13 +26,13 @@ public class UserRepository : DbRepositoryBase<User>, IUserRepository
 
     public async Task<User> GetRegUserFromRedisByIdAsync(Guid id)
     {
-        var key = $"{RedisKeyPrefixRegUser}:{id}";
+        var key = $"{RedisPrefixes.User.Registration}:{id}";
         return await _cacheRepo.GetAsync<User>(key);
     }
 
     public async Task<RedisUserUpdate> GetUpdateUserFromRedisByIdAsync(Guid id)
     {
-        var key = $"{RedisKeyPrefixUpdateUser}:{id}";
+        var key = $"{RedisPrefixes.User.Update}:{id}";
         return await _cacheRepo.GetAsync<RedisUserUpdate>(key);
     }
 
@@ -69,13 +65,13 @@ public class UserRepository : DbRepositoryBase<User>, IUserRepository
 
     public bool AddRegUserToRedis(User user, TimeSpan ttl)
     {
-        var keyBaseEntity = $"{RedisKeyPrefixRegUser}:{user.Id}";
+        var keyBaseEntity = $"{RedisPrefixes.User.Registration}:{user.Id}";
         var isUserAdded = _cacheRepo.Add(keyBaseEntity, user, ttl);
 
-        var keyUsername = $"{RedisKeyPrefixUserName}:{user.Username}";
+        var keyUsername = $"{RedisPrefixes.User.Name}:{user.Username}";
         var isUsernameMapping = _cacheRepo.Add(keyUsername, user.Id.ToString(), ttl);
 
-        var keyEmail = $"{RedisKeyPrefixUserEmail}:{user.Email}";
+        var keyEmail = $"{RedisPrefixes.User.Email}:{user.Email}";
         var isEmailMapping = _cacheRepo.Add(keyEmail, user.Id.ToString(), ttl);
 
         return isUserAdded && isUsernameMapping && isEmailMapping;
@@ -83,20 +79,20 @@ public class UserRepository : DbRepositoryBase<User>, IUserRepository
 
     public bool AddToRedisUpdateRequest(RedisUserUpdate updateRequest, TokenType tokenType, TimeSpan ttl)
     {
-        var keyBaseEntity = $"{RedisKeyPrefixUpdateUser}:{updateRequest.Id}";
+        var keyBaseEntity = $"{RedisPrefixes.User.Update}:{updateRequest.Id}";
         var isUserUpdateRequestAdded = _cacheRepo.Add(keyBaseEntity, updateRequest, ttl);
 
         switch (tokenType)
         {
             case TokenType.UsernameChange:
             {
-                var keyUsername = $"{RedisKeyPrefixUserName}:{updateRequest.Username}";
+                var keyUsername = $"{RedisPrefixes.User.Name}:{updateRequest.Username}";
                 var isUsernameMapping = _cacheRepo.Add(keyUsername, updateRequest.Username, ttl);
                 return isUsernameMapping && isUserUpdateRequestAdded;
             }
             case TokenType.EmailChangeOld:
             {
-                var keyEmail = $"{RedisKeyPrefixUserEmail}:{updateRequest.Email}";
+                var keyEmail = $"{RedisPrefixes.User.Email}:{updateRequest.Email}";
                 var isEmailMapping = _cacheRepo.Add(keyEmail, updateRequest.Email, ttl);
                 return isEmailMapping && isUserUpdateRequestAdded;
             }
@@ -130,13 +126,13 @@ public class UserRepository : DbRepositoryBase<User>, IUserRepository
 
     public async Task<bool> DeleteRegUserFromRedisAsync(User user)
     {
-        var keyBaseEntity = $"{RedisKeyPrefixRegUser}:{user.Id}";
+        var keyBaseEntity = $"{RedisPrefixes.User.Registration}:{user.Id}";
         var isUserRemoved = await _cacheRepo.DeleteAsync(keyBaseEntity);
 
-        var keyUsername = $"{RedisKeyPrefixUserName}:{user.Username}";
+        var keyUsername = $"{RedisPrefixes.User.Name}:{user.Username}";
         var isUsernameRemoved = await _cacheRepo.DeleteAsync(keyUsername);
 
-        var keyEmail = $"{RedisKeyPrefixUserEmail}:{user.Email}";
+        var keyEmail = $"{RedisPrefixes.User.Email}:{user.Email}";
         var isEmailRemoved = await _cacheRepo.DeleteAsync(keyEmail);
 
         return isUserRemoved && isUsernameRemoved && isEmailRemoved;
@@ -144,13 +140,13 @@ public class UserRepository : DbRepositoryBase<User>, IUserRepository
 
     public async Task<bool> DeleteUserUpdateDataFromRedisAsync(RedisUserUpdate update, TokenType tokenType)
     {
-        var keyBaseEntity = $"{RedisKeyPrefixUpdateUser}:{update.Id}";
+        var keyBaseEntity = $"{RedisPrefixes.User.Update}:{update.Id}";
         var isUserUpdateDataRemoved = await _cacheRepo.DeleteAsync(keyBaseEntity);
 
         var additionalKey = tokenType switch
         {
-            TokenType.UsernameChange => $"{RedisKeyPrefixUserName}:{update.Username}",
-            TokenType.EmailChangeOld or TokenType.EmailChangeNew => $"{RedisKeyPrefixUserEmail}:{update.Email}",
+            TokenType.UsernameChange => $"{RedisPrefixes.User.Name}:{update.Username}",
+            TokenType.EmailChangeOld or TokenType.EmailChangeNew => $"{RedisPrefixes.User.Email}:{update.Email}",
             _ => null
         };
 
@@ -167,13 +163,13 @@ public class UserRepository : DbRepositoryBase<User>, IUserRepository
 
     public async Task<bool> UpdateTtlRegUserAsync(User user, TimeSpan ttl)
     {
-        var keyBaseEntity = $"{RedisKeyPrefixRegUser}:{user.Id}";
+        var keyBaseEntity = $"{RedisPrefixes.User.Registration}:{user.Id}";
         var isUserAdded = await _cacheRepo.UpdateTtlAsync(keyBaseEntity, ttl);
 
-        var keyUsername = $"{RedisKeyPrefixUserName}:{user.Username}";
+        var keyUsername = $"{RedisPrefixes.User.Name}:{user.Username}";
         var isUsernameMapping = await _cacheRepo.UpdateTtlAsync(keyUsername, ttl);
 
-        var keyEmail = $"{RedisKeyPrefixUserEmail}:{user.Email}";
+        var keyEmail = $"{RedisPrefixes.User.Email}:{user.Email}";
         var isEmailMapping = await _cacheRepo.UpdateTtlAsync(keyEmail, ttl);
 
         return isUserAdded && isUsernameMapping && isEmailMapping;
@@ -181,20 +177,20 @@ public class UserRepository : DbRepositoryBase<User>, IUserRepository
 
     public async Task<bool> UpdateTtlUserUpdateAsync(RedisUserUpdate updateRequest, TokenType tokenType, TimeSpan ttl)
     {
-        var keyBaseEntity = $"{RedisKeyPrefixUpdateUser}:{updateRequest.Id}";
+        var keyBaseEntity = $"{RedisPrefixes.User.Update}:{updateRequest.Id}";
         var isUserUpdateTtl = await _cacheRepo.UpdateTtlAsync(keyBaseEntity, ttl);
 
         switch (tokenType)
         {
             case TokenType.UsernameChange:
             {
-                var keyUsername = $"{RedisKeyPrefixUserName}:{updateRequest.Username}";
+                var keyUsername = $"{RedisPrefixes.User.Name}:{updateRequest.Username}";
                 var isUsernameUpdateTtl = await _cacheRepo.UpdateTtlAsync(keyUsername, ttl);
                 return isUsernameUpdateTtl && isUserUpdateTtl;
             }
             case TokenType.EmailChangeOld:
             {
-                var keyEmail = $"{RedisKeyPrefixUserEmail}:{updateRequest.Email}";
+                var keyEmail = $"{RedisPrefixes.User.Email}:{updateRequest.Email}";
                 var isEmailUpdateTtl = await _cacheRepo.UpdateTtlAsync(keyEmail, ttl);
                 return isEmailUpdateTtl && isUserUpdateTtl;
             }
@@ -209,13 +205,13 @@ public class UserRepository : DbRepositoryBase<User>, IUserRepository
 
     public async Task<bool> IsUserUpdateInProgress(Guid id)
     {
-        var key = $"{RedisKeyPrefixUpdateUser}:{id}";
+        var key = $"{RedisPrefixes.User.Update}:{id}";
         return await _cacheRepo.KeyExistsAsync(key);
     }
 
     public async Task<bool> UserExistsByUsernameAsync(string username)
     {
-        var keyUsername = $"{RedisKeyPrefixUserName}:{username}";
+        var keyUsername = $"{RedisPrefixes.User.Name}:{username}";
         var doesUserExistInRedis = !string.IsNullOrEmpty(await _cacheRepo.GetAsync<string>(keyUsername));
         if (doesUserExistInRedis)
             return true;
@@ -225,7 +221,7 @@ public class UserRepository : DbRepositoryBase<User>, IUserRepository
 
     public async Task<bool> UserExistsByEmailAsync(string email)
     {
-        var keyEmail = $"{RedisKeyPrefixUserEmail}:{email}";
+        var keyEmail = $"{RedisPrefixes.User.Email}:{email}";
         var doesUserExistInRedis = !string.IsNullOrEmpty(await _cacheRepo.GetAsync<string>(keyEmail));
         if (doesUserExistInRedis)
             return true;
