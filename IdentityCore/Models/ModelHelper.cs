@@ -1,4 +1,4 @@
-using IdentityCore.DAL.PostgreSQL.Models;
+using IdentityCore.DAL.PostgreSQL.Models.db;
 using IdentityCore.Models.Response;
 
 namespace IdentityCore.Models;

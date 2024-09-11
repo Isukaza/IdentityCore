@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
 
-namespace IdentityCore.DAL.PostgreSQL.Models;
+namespace IdentityCore.DAL.PostgreSQL.Models.cache;
 
 public record RedisConfirmationToken
 {
