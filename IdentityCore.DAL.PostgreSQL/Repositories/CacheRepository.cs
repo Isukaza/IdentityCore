@@ -1,14 +1,14 @@
 using System.Text.Json;
-using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.Base;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
 using StackExchange.Redis;
 
-namespace IdentityCore.DAL.PostgreSQL.Repositories.Base;
+namespace IdentityCore.DAL.PostgreSQL.Repositories;
 
-public class CacheRepositoryBase : ICacheRepositoryBase
+public class CacheRepository : ICacheRepository
 {
     private readonly IDatabase _cache;
 
-    public CacheRepositoryBase(IConnectionMultiplexer multiplexer)
+    public CacheRepository(IConnectionMultiplexer multiplexer)
     {
         _cache = multiplexer.GetDatabase();
     }

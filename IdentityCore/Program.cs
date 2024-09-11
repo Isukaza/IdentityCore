@@ -9,9 +9,7 @@ using Microsoft.OpenApi.Models;
 using IdentityCore.Configuration;
 using IdentityCore.DAL.PostgreSQL;
 using IdentityCore.DAL.PostgreSQL.Repositories;
-using IdentityCore.DAL.PostgreSQL.Repositories.Base;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
-using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.Base;
 using IdentityCore.Managers;
 using IdentityCore.Managers.Interfaces;
 
@@ -67,7 +65,7 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
     return ConnectionMultiplexer.Connect(redisConnectionUrl);
 });
 
-builder.Services.AddScoped<ICacheRepositoryBase, CacheRepositoryBase>();
+builder.Services.AddScoped<ICacheRepository, CacheRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IConfirmationTokenRepository, ConfirmationTokenRepository>();

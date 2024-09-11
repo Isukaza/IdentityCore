@@ -1,7 +1,6 @@
 using IdentityCore.DAL.PostgreSQL.Models.cache;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
-using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.Base;
 
 namespace IdentityCore.DAL.PostgreSQL.Repositories;
 
@@ -10,9 +9,9 @@ public class ConfirmationTokenRepository : IConfirmationTokenRepository
     #region C-tor
 
     private const string RedisKeyPrefix = "CT";
-    private readonly ICacheRepositoryBase _cacheRepo;
+    private readonly ICacheRepository _cacheRepo;
 
-    public ConfirmationTokenRepository(ICacheRepositoryBase cacheRepo)
+    public ConfirmationTokenRepository(ICacheRepository cacheRepo)
     {
         _cacheRepo = cacheRepo;
     }

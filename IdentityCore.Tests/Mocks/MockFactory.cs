@@ -10,9 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using IdentityCore.DAL.PostgreSQL;
 using IdentityCore.DAL.PostgreSQL.Repositories;
-using IdentityCore.DAL.PostgreSQL.Repositories.Base;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
-using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.Base;
 using IdentityCore.Managers;
 using IdentityCore.Managers.Interfaces;
 
@@ -106,7 +104,7 @@ public static class MockFactory
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IConfirmationTokenRepository, ConfirmationTokenRepository>();
-        services.AddScoped<ICacheRepositoryBase, CacheRepositoryBase>();
+        services.AddScoped<ICacheRepository, CacheRepository>();
 
         services.AddScoped<IUserManager, UserManager>();
         services.AddScoped<IRefreshTokenManager, RefreshTokenManager>();

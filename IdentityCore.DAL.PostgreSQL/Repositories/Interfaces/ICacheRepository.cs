@@ -1,6 +1,6 @@
-namespace IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.Base;
+namespace IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
 
-public interface ICacheRepositoryBase
+public interface ICacheRepository
 {
     Task<T> GetAsync<T>(string key);
 

@@ -5,7 +5,6 @@ using IdentityCore.DAL.PostgreSQL.Models.db;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
 using IdentityCore.DAL.PostgreSQL.Repositories.Base;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
-using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.Base;
 
 namespace IdentityCore.DAL.PostgreSQL.Repositories;
 
@@ -18,9 +17,9 @@ public class UserRepository : DbRepositoryBase<User>, IUserRepository
     private const string RedisKeyPrefixUserName = "Username";
     private const string RedisKeyPrefixUserEmail = "Email";
 
-    private readonly ICacheRepositoryBase _cacheRepo;
+    private readonly ICacheRepository _cacheRepo;
 
-    public UserRepository(IdentityCoreDbContext dbContext, ICacheRepositoryBase cacheRepo) : base(dbContext)
+    public UserRepository(IdentityCoreDbContext dbContext, ICacheRepository cacheRepo) : base(dbContext)
     {
         _cacheRepo = cacheRepo;
     }
