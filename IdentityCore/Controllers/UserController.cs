@@ -283,7 +283,7 @@ public class UserController : Controller
         if (userUpdateData is null && tokenDb.TokenType != TokenType.RegistrationConfirmation)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
 
-        var executionError = await _userManager.ProcessUserTokenActionAsync(user, userUpdateData, tokenDb);
+        var executionError = await _userManager.ExecuteUserUpdateFromTokenAsync(user, userUpdateData, tokenDb);
         return string.IsNullOrEmpty(executionError)
             ? await StatusCodes.Status200OK.ResultState("Operation was successfully completed")
             : await StatusCodes.Status500InternalServerError.ResultState(executionError);

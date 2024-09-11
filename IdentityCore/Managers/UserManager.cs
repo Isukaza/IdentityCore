@@ -14,21 +14,13 @@ public class UserManager : IUserManager
     #region C-tor and fields
 
     private readonly IUserRepository _userRepo;
-    private readonly IRefreshTokenRepository _refTokenRepo;
     private readonly IConfirmationTokenRepository _ctRepo;
 
-    private readonly IRefreshTokenManager _refTokenManager;
 
-    public UserManager(IUserRepository userRepo,
-        IRefreshTokenRepository refTokenRepo,
-        IConfirmationTokenRepository ctRepo,
-        IRefreshTokenManager refTokenManager)
+    public UserManager(IUserRepository userRepo, IConfirmationTokenRepository ctRepo)
     {
         _userRepo = userRepo;
-        _refTokenRepo = refTokenRepo;
         _ctRepo = ctRepo;
-
-        _refTokenManager = refTokenManager;
     }
 
     #endregion
@@ -47,9 +39,6 @@ public class UserManager : IUserManager
 
         return new OperationResult<User>(user);
     }
-
-    public async Task<User> GetRegUserFromRedisByIdAsync(Guid id) =>
-        await _userRepo.GetRegUserFromRedisByIdAsync(id);
 
     public async Task<User> CreateUserForRegistrationAsync(UserCreateRequest userData, Provider provider)
     {
@@ -99,15 +88,16 @@ public class UserManager : IUserManager
         return await _userRepo.UpdateAsync(user);
     }
 
-    public async Task<bool> DeleteUserAsync(User user)
-    {
-        return user is not null && await _userRepo.DeleteAsync(user);
-    }
+    public async Task<bool> DeleteUserAsync(User user) =>
+        user is not null && await _userRepo.DeleteAsync(user);
 
     #endregion
 
     #region Redis
 
+    public async Task<User> GetRegUserFromRedisByIdAsync(Guid id) =>
+        await _userRepo.GetRegUserFromRedisByIdAsync(id);
+    
     public async Task<RedisUserUpdate> GetUpdateUserFromRedisByIdAsync(Guid id) =>
         await _userRepo.GetUpdateUserFromRedisByIdAsync(id);
 
@@ -130,19 +120,14 @@ public class UserManager : IUserManager
         return _userRepo.AddToRedisUpdateRequest(redisUserUpdate, tokenType, ttl) ? redisUserUpdate : null;
     }
 
-    public async Task<bool> DeleteRegisteredUserFromRedisAsync(User user)
-    {
-        if (user is null)
-            return false;
-
-        return await _userRepo.DeleteRegUserFromRedisAsync(user);
-    }
+    public async Task<bool> DeleteRegisteredUserFromRedisAsync(User user) =>
+        user is not null && await _userRepo.DeleteRegUserFromRedisAsync(user);
 
     #endregion
 
-    #region Token Management
+    #region Token-Based Update Handling
 
-    public async Task<string> ProcessUserTokenActionAsync(
+    public async Task<string> ExecuteUserUpdateFromTokenAsync(
         User user,
         RedisUserUpdate userUpdate,
         RedisConfirmationToken token)
@@ -156,6 +141,82 @@ public class UserManager : IUserManager
             TokenType.UsernameChange => await HandleUsernameChange(user, userUpdate, token),
             _ => throw new ArgumentException("Unknown TokenType")
         };
+    }
+
+    private async Task<string> HandleRegistrationConfirmation(User user, RedisConfirmationToken token)
+    {
+        var isTokenRemoved = await _ctRepo.DeleteFromRedisAsync(token);
+        var isUserRemoved = await _userRepo.DeleteRegUserFromRedisAsync(user);
+        if (!isTokenRemoved || !isUserRemoved)
+            return "Activation error";
+
+        user.IsActive = true;
+        return await _userRepo.CreateAsync(user) is not null
+            ? string.Empty
+            : "Activation error";
+    }
+
+    private async Task<string> HandleEmailChangeOld(RedisUserUpdate userUpdate, RedisConfirmationToken token)
+    {
+        var isRemoved = await _ctRepo.DeleteFromRedisAsync(token);
+        if (!isRemoved)
+            return "Error changing email";
+
+        token.TokenType = TokenType.EmailChangeNew;
+        var ttl = TokenConfig.GetTtlForTokenType(TokenType.EmailChangeNew);
+        var isTokenUpdated = _ctRepo.AddToRedis(token, ttl);
+        var isUserUpdated = await _userRepo.UpdateTtlUserUpdateAsync(userUpdate, token.TokenType, ttl);
+
+        if (isTokenUpdated && isUserUpdated)
+            return string.Empty;
+
+        _ = await _ctRepo.DeleteFromRedisAsync(token);
+        _ = await _userRepo.DeleteUserUpdateDataFromRedisAsync(userUpdate, token.TokenType);
+
+        return "Error changing email";
+    }
+
+    private async Task<string> HandleEmailChangeNew(User user, RedisUserUpdate userUpdate, RedisConfirmationToken token)
+    {
+        var isTokenRemoved = await _ctRepo.DeleteFromRedisAsync(token);
+        var isUserRemoved = await _userRepo.DeleteUserUpdateDataFromRedisAsync(userUpdate, token.TokenType);
+        if (!isTokenRemoved || !isUserRemoved || string.IsNullOrEmpty(userUpdate.Email))
+            return "An error occurred while changing email";
+
+        user.Email = userUpdate.Email;
+        return await _userRepo.UpdateAsync(user)
+            ? string.Empty
+            : "An error occurred while changing email";
+    }
+
+    private async Task<string> HandlePasswordChange(User user, RedisUserUpdate userUpdate, RedisConfirmationToken token)
+    {
+        var isTokenRemoved = await _ctRepo.DeleteFromRedisAsync(token);
+        var isUserRemoved = await _userRepo.DeleteUserUpdateDataFromRedisAsync(userUpdate, token.TokenType);
+        if (!isTokenRemoved
+            || !isUserRemoved
+            || string.IsNullOrEmpty(userUpdate.Password)
+            || string.IsNullOrEmpty(userUpdate.Salt))
+            return "An error occurred while changing password";
+
+        user.Password = userUpdate.Password;
+        user.Salt = userUpdate.Salt;
+        return await _userRepo.UpdateAsync(user)
+            ? string.Empty
+            : "An error occurred while changing password";
+    }
+
+    private async Task<string> HandleUsernameChange(User user, RedisUserUpdate userUpdate, RedisConfirmationToken token)
+    {
+        var isTokenRemoved = await _ctRepo.DeleteFromRedisAsync(token);
+        var isUserRemoved = await _userRepo.DeleteUserUpdateDataFromRedisAsync(userUpdate, token.TokenType);
+        if (!isTokenRemoved || !isUserRemoved || string.IsNullOrEmpty(userUpdate.Username))
+            return "An error occurred while changing username";
+
+        user.Username = userUpdate.Username;
+        return await _userRepo.UpdateAsync(user)
+            ? string.Empty
+            : "An error occurred while changing username";
     }
 
     #endregion
@@ -236,86 +297,6 @@ public class UserManager : IUserManager
             return "A user with this username exists";
 
         return string.Empty;
-    }
-
-    #endregion
-
-    #region Update Handling
-
-    private async Task<string> HandleRegistrationConfirmation(User user, RedisConfirmationToken token)
-    {
-        var isTokenRemoved = await _ctRepo.DeleteFromRedisAsync(token);
-        var isUserRemoved = await _userRepo.DeleteRegUserFromRedisAsync(user);
-        if (!isTokenRemoved || !isUserRemoved)
-            return "Activation error";
-
-        user.IsActive = true;
-        return await _userRepo.CreateAsync(user) is not null
-            ? string.Empty
-            : "Activation error";
-    }
-
-    private async Task<string> HandleEmailChangeOld(RedisUserUpdate userUpdate, RedisConfirmationToken token)
-    {
-        var isRemoved = await _ctRepo.DeleteFromRedisAsync(token);
-        if (!isRemoved)
-            return "Error changing email";
-
-        token.TokenType = TokenType.EmailChangeNew;
-        var ttl = TokenConfig.GetTtlForTokenType(TokenType.EmailChangeNew);
-        var isTokenUpdated = _ctRepo.AddToRedis(token, ttl);
-        var isUserUpdated = await _userRepo.UpdateTtlUserUpdateAsync(userUpdate, token.TokenType, ttl);
-
-        if (isTokenUpdated && isUserUpdated)
-            return string.Empty;
-
-        _ = await _ctRepo.DeleteFromRedisAsync(token);
-        _ = await _userRepo.DeleteUserUpdateDataFromRedisAsync(userUpdate, token.TokenType);
-
-        return "Error changing email";
-    }
-
-    private async Task<string> HandleEmailChangeNew(User user, RedisUserUpdate userUpdate, RedisConfirmationToken token)
-    {
-        var isTokenRemoved = await _ctRepo.DeleteFromRedisAsync(token);
-        var isUserRemoved = await _userRepo.DeleteUserUpdateDataFromRedisAsync(userUpdate, token.TokenType);
-        if (!isTokenRemoved || !isUserRemoved || string.IsNullOrEmpty(userUpdate.Email))
-            return "An error occurred while changing email";
-
-        user.Email = userUpdate.Email;
-        return await _userRepo.UpdateAsync(user)
-            ? string.Empty
-            : "An error occurred while changing email";
-    }
-
-    private async Task<string> HandlePasswordChange(User user, RedisUserUpdate userUpdate, RedisConfirmationToken token)
-    {
-        var isTokenRemoved = await _ctRepo.DeleteFromRedisAsync(token);
-        var isUserRemoved = await _userRepo.DeleteUserUpdateDataFromRedisAsync(userUpdate, token.TokenType);
-        if (!isTokenRemoved
-            || !isUserRemoved
-            || string.IsNullOrEmpty(userUpdate.Password)
-            || string.IsNullOrEmpty(userUpdate.Salt))
-            return "An error occurred while changing password";
-
-        user.Password = userUpdate.Password;
-        user.Salt = userUpdate.Salt;
-        return await _userRepo.UpdateAsync(user)
-            ? string.Empty
-            : "An error occurred while changing password";
-    }
-
-    private async Task<string> HandleUsernameChange(User user, RedisUserUpdate userUpdate, RedisConfirmationToken token)
-    {
-        var isTokenRemoved = await _ctRepo.DeleteFromRedisAsync(token);
-        var isUserRemoved = await _userRepo.DeleteUserUpdateDataFromRedisAsync(userUpdate, token.TokenType);
-        if (!isTokenRemoved || !isUserRemoved || string.IsNullOrEmpty(userUpdate.Username))
-            return "An error occurred while changing username";
-
-        user.Username = userUpdate.Username;
-        return await _userRepo.UpdateAsync(user)
-            ? string.Empty
-            : "An error occurred while changing username";
     }
 
     #endregion
