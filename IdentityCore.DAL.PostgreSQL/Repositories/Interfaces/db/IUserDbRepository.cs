@@ -1,9 +1,9 @@
 using IdentityCore.DAL.PostgreSQL.Models.db;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.Base;
 
-namespace IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
+namespace IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.db;
 
-public interface IUserRepository : IDbRepositoryBase<User>
+public interface IUserDbRepository : IDbRepositoryBase<User>
 {
     Task<User> GetUserByIdAsync(Guid id);
     Task<User> GetUserByUsernameAsync(string username);

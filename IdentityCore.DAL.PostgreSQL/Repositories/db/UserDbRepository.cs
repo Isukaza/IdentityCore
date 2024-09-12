@@ -1,15 +1,15 @@
-using Microsoft.EntityFrameworkCore;
-
 using IdentityCore.DAL.PostgreSQL.Models.db;
 using IdentityCore.DAL.PostgreSQL.Repositories.Base;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.db;
+using Microsoft.EntityFrameworkCore;
 
-namespace IdentityCore.DAL.PostgreSQL.Repositories;
+namespace IdentityCore.DAL.PostgreSQL.Repositories.db;
 
-public class UserRepository : DbRepositoryBase<User>, IUserRepository
+public class UserDbRepository : DbRepositoryBase<User>, IUserDbRepository
 {
     #region C-tor
-    public UserRepository(IdentityCoreDbContext dbContext) : base(dbContext)
+    public UserDbRepository(IdentityCoreDbContext dbContext) : base(dbContext)
     { }
 
     #endregion

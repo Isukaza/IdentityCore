@@ -2,16 +2,18 @@ using IdentityCore.DAL.PostgreSQL.Models.cache;
 using IdentityCore.DAL.PostgreSQL.Models.cache.cachePrefix;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.Base;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.cache;
 
-namespace IdentityCore.DAL.PostgreSQL.Repositories;
+namespace IdentityCore.DAL.PostgreSQL.Repositories.cache;
 
-public class ConfirmationTokenRepository : IConfirmationTokenRepository
+public class CfmTokenCacheRepository : ICfmTokenCacheRepository
 {
     #region C-tor
 
-    private readonly ICacheRepository _cacheRepo;
+    private readonly ICacheRepositoryBase _cacheRepo;
 
-    public ConfirmationTokenRepository(ICacheRepository cacheRepo)
+    public CfmTokenCacheRepository(ICacheRepositoryBase cacheRepo)
     {
         _cacheRepo = cacheRepo;
     }

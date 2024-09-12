@@ -5,6 +5,9 @@ using IdentityCore.DAL.PostgreSQL.Models.cache.cachePrefix;
 using IdentityCore.DAL.PostgreSQL.Models.db;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.Base;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.cache;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.db;
 using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models;
 using IdentityCore.Models.Request;
@@ -15,14 +18,14 @@ public class UserManager : IUserManager
 {
     #region C-tor and fields
 
-    private readonly IUserRepository _userRepo;
-    private readonly ICacheRepository _cacheRepo;
-    private readonly IConfirmationTokenRepository _ctRepo;
+    private readonly IUserDbRepository _userDbRepo;
+    private readonly ICacheRepositoryBase _cacheRepo;
+    private readonly ICfmTokenCacheRepository _ctRepo;
 
-    public UserManager(IUserRepository userRepo, ICacheRepository cacheRepo, IConfirmationTokenRepository ctRepo)
+    public UserManager(IUserDbRepository userDbRepo, ICacheRepositoryBase cacheRepo, ICfmTokenCacheRepository ctRepo)
     {
         _cacheRepo = cacheRepo;
-        _userRepo = userRepo;
+        _userDbRepo = userDbRepo;
         _ctRepo = ctRepo;
     }
 
@@ -31,11 +34,11 @@ public class UserManager : IUserManager
     #region CRUD
 
     public async Task<User> GetUserByIdAsync(Guid id) =>
-        await _userRepo.GetUserByIdAsync(id);
+        await _userDbRepo.GetUserByIdAsync(id);
 
     public async Task<OperationResult<User>> GetUserSsoAsync(string email)
     {
-        var user = await _userRepo.GetUserByEmailAsync(email);
+        var user = await _userDbRepo.GetUserByEmailAsync(email);
         if (user is null
             || (user.Provider == Provider.Local && !await UpdateUserProviderAsync(user, Provider.GoogleWithPass)))
             return new OperationResult<User>("Error updating user to SSO provider");
@@ -58,7 +61,7 @@ public class UserManager : IUserManager
         if (provider != Provider.Local)
         {
             user.IsActive = true;
-            return await _userRepo.CreateAsync(user);
+            return await _userDbRepo.CreateAsync(user);
         }
 
         user.Salt = UserHelper.GenerateSalt();
@@ -88,11 +91,11 @@ public class UserManager : IUserManager
     private async Task<bool> UpdateUserProviderAsync(User user, Provider provider)
     {
         user.Provider = provider;
-        return await _userRepo.UpdateAsync(user);
+        return await _userDbRepo.UpdateAsync(user);
     }
 
     public async Task<bool> DeleteUserAsync(User user) =>
-        user is not null && await _userRepo.DeleteAsync(user);
+        user is not null && await _userDbRepo.DeleteAsync(user);
 
     #endregion
 
@@ -270,7 +273,7 @@ public class UserManager : IUserManager
             return "Activation error";
 
         user.IsActive = true;
-        return await _userRepo.CreateAsync(user) is not null
+        return await _userDbRepo.CreateAsync(user) is not null
             ? string.Empty
             : "Activation error";
     }
@@ -305,7 +308,7 @@ public class UserManager : IUserManager
             return "An error occurred while changing email";
 
         user.Email = userUpdate.Email;
-        return await _userRepo.UpdateAsync(user)
+        return await _userDbRepo.UpdateAsync(user)
             ? string.Empty
             : "An error occurred while changing email";
     }
@@ -324,7 +327,7 @@ public class UserManager : IUserManager
 
         user.Password = userUpdate.Password;
         user.Salt = userUpdate.Salt;
-        return await _userRepo.UpdateAsync(user)
+        return await _userDbRepo.UpdateAsync(user)
             ? string.Empty
             : "An error occurred while changing password";
     }
@@ -339,7 +342,7 @@ public class UserManager : IUserManager
             return "An error occurred while changing username";
 
         user.Username = userUpdate.Username;
-        return await _userRepo.UpdateAsync(user)
+        return await _userDbRepo.UpdateAsync(user)
             ? string.Empty
             : "An error occurred while changing username";
     }
@@ -361,7 +364,7 @@ public class UserManager : IUserManager
             && await UserExistsByUsernameAsync(updateData.Username))
             return new OperationResult<User>("A user with this username exists");
 
-        var user = await _userRepo.GetUserByIdAsync(updateData.Id);
+        var user = await _userDbRepo.GetUserByIdAsync(updateData.Id);
         if (user is null
             || (user.Provider == Provider.Google && !string.IsNullOrWhiteSpace(updateData.OldPassword))
             || (user.Provider != Provider.Local && !string.IsNullOrWhiteSpace(updateData.Email)))
@@ -381,7 +384,7 @@ public class UserManager : IUserManager
         if (string.IsNullOrWhiteSpace(loginRequest.Email) || string.IsNullOrWhiteSpace(loginRequest.Password))
             return new OperationResult<User>("Email or password is invalid");
 
-        var user = await _userRepo.GetUserByEmailAsync(loginRequest.Email);
+        var user = await _userDbRepo.GetUserByEmailAsync(loginRequest.Email);
         if (user is null || user.Provider == Provider.Google)
             return new OperationResult<User>("Email or password is invalid");
 
@@ -420,7 +423,7 @@ public class UserManager : IUserManager
         if (doesUserExistInRedis)
             return true;
 
-        return await _userRepo.GetUserByEmailAsync(email) is not null;
+        return await _userDbRepo.GetUserByEmailAsync(email) is not null;
     }
 
     private static bool IsSingleFieldProvided(UserUpdateRequest updateRequest)
@@ -441,7 +444,7 @@ public class UserManager : IUserManager
         if (doesUserExistInRedis)
             return true;
 
-        return await _userRepo.GetUserByUsernameAsync(username) is not null;
+        return await _userDbRepo.GetUserByUsernameAsync(username) is not null;
     }
 
     #endregion

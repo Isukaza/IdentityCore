@@ -9,8 +9,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 using IdentityCore.DAL.PostgreSQL;
-using IdentityCore.DAL.PostgreSQL.Repositories;
+using IdentityCore.DAL.PostgreSQL.Repositories.Base;
+using IdentityCore.DAL.PostgreSQL.Repositories.cache;
+using IdentityCore.DAL.PostgreSQL.Repositories.db;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.Base;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.cache;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.db;
 using IdentityCore.Managers;
 using IdentityCore.Managers.Interfaces;
 
@@ -101,10 +106,10 @@ public static class MockFactory
             return mockGoogleManager.Object;
         });
 
-        services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
-        services.AddScoped<IConfirmationTokenRepository, ConfirmationTokenRepository>();
-        services.AddScoped<ICacheRepository, CacheRepository>();
+        services.AddScoped<IUserDbRepository, UserDbRepository>();
+        services.AddScoped<IRefreshTokenDbRepository, RefreshTokenDbRepository>();
+        services.AddScoped<ICfmTokenCacheRepository, CfmTokenCacheRepository>();
+        services.AddScoped<ICacheRepositoryBase, CacheRepositoryBase>();
 
         services.AddScoped<IUserManager, UserManager>();
         services.AddScoped<IRefreshTokenManager, RefreshTokenManager>();

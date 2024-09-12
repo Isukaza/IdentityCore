@@ -4,6 +4,7 @@ using IdentityCore.DAL.PostgreSQL.Models.cache;
 using IdentityCore.DAL.PostgreSQL.Models.db;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.cache;
 using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models.Request;
 
@@ -14,9 +15,9 @@ public class ConfirmationTokenManager : IConfirmationTokenManager
     #region C-tor and fields
     
     private readonly IUserManager _userManager;
-    private readonly IConfirmationTokenRepository _ctRepo;
+    private readonly ICfmTokenCacheRepository _ctRepo;
 
-    public ConfirmationTokenManager(IUserManager userManager, IConfirmationTokenRepository ctRepo)
+    public ConfirmationTokenManager(IUserManager userManager, ICfmTokenCacheRepository ctRepo)
     {
         _userManager = userManager;
         _ctRepo = ctRepo;

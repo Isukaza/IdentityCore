@@ -1,16 +1,16 @@
-using Microsoft.EntityFrameworkCore;
-
 using IdentityCore.DAL.PostgreSQL.Models.db;
 using IdentityCore.DAL.PostgreSQL.Repositories.Base;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.db;
+using Microsoft.EntityFrameworkCore;
 
-namespace IdentityCore.DAL.PostgreSQL.Repositories;
+namespace IdentityCore.DAL.PostgreSQL.Repositories.db;
 
-public class RefreshTokenRepository : DbRepositoryBase<RefreshToken>, IRefreshTokenRepository
+public class RefreshTokenDbRepository : DbRepositoryBase<RefreshToken>, IRefreshTokenDbRepository
 {
     #region C-tor
 
-    public RefreshTokenRepository(IdentityCoreDbContext dbContext) : base(dbContext)
+    public RefreshTokenDbRepository(IdentityCoreDbContext dbContext) : base(dbContext)
     { }
 
     #endregion

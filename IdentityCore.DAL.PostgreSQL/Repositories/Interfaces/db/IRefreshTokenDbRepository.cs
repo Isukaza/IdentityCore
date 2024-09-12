@@ -1,9 +1,9 @@
 using IdentityCore.DAL.PostgreSQL.Models.db;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.Base;
 
-namespace IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
+namespace IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.db;
 
-public interface IRefreshTokenRepository : IDbRepositoryBase<RefreshToken>
+public interface IRefreshTokenDbRepository : IDbRepositoryBase<RefreshToken>
 {
     Task<int> GetCountUserTokensAsync(Guid id);
     Task<RefreshToken> GetTokenByUserIdAsync(Guid userId, string token);
