@@ -76,7 +76,11 @@ public class UserController : Controller
         var cfmToken = _ctManager.CreateConfirmationToken(user.Id, TokenType.RegistrationConfirmation);
         if (cfmToken is null)
         {
-            _ = await _userManager.DeleteRegisteredUserFromRedisAsync(user);
+            _ = await _userManager.DeleteUserDataFromRedisByTokenTypeAsync(
+                user.Id,
+                user.Username,
+                user.Email,
+                TokenType.RegistrationConfirmation);
             return await StatusCodes.Status500InternalServerError.ResultState("Error creating user");
         }
 
@@ -117,7 +121,7 @@ public class UserController : Controller
         if (tokenType is TokenType.Unknown)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
 
-        var redisUserUpdate = _userManager.SaveUserUpdateToRedis(updateRequest, tokenType);
+        var redisUserUpdate = _userManager.HandleUserUpdateInRedis(updateRequest, tokenType);
         if (redisUserUpdate is null)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
 

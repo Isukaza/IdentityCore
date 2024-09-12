@@ -12,14 +12,14 @@ namespace IdentityCore.Managers;
 public class ConfirmationTokenManager : IConfirmationTokenManager
 {
     #region C-tor and fields
-
+    
+    private readonly IUserManager _userManager;
     private readonly IConfirmationTokenRepository _ctRepo;
-    private readonly IUserRepository _userRepo;
 
-    public ConfirmationTokenManager(IConfirmationTokenRepository ctRepo, IUserRepository userRepo)
+    public ConfirmationTokenManager(IUserManager userManager, IConfirmationTokenRepository ctRepo)
     {
+        _userManager = userManager;
         _ctRepo = ctRepo;
-        _userRepo = userRepo;
     }
 
     #endregion
@@ -80,9 +80,7 @@ public class ConfirmationTokenManager : IConfirmationTokenManager
 
         var ttl = TokenConfig.GetTtlForTokenType(token.TokenType);
         var isRemovedToken = await _ctRepo.DeleteFromRedisAsync(token);
-        var isUpdateTtl = token.TokenType == TokenType.RegistrationConfirmation
-            ? await _userRepo.UpdateTtlRegUserAsync(user, ttl)
-            : await _userRepo.UpdateTtlUserUpdateAsync(userUpdate, token.TokenType, ttl);
+        var isUpdateTtl = await _userManager.UpdateTtlUserUpdateByTokenTypeAsync(userUpdate, token.TokenType, ttl);
 
         if (!isRemovedToken || !isUpdateTtl)
             return null;

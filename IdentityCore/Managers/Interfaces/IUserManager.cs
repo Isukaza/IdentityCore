@@ -16,8 +16,9 @@ public interface IUserManager
     
     Task<User> GetRegUserFromRedisByIdAsync(Guid id);
     Task<RedisUserUpdate> GetUpdateUserFromRedisByIdAsync(Guid id);
-    RedisUserUpdate SaveUserUpdateToRedis(UserUpdateRequest updateRequest, TokenType tokenType);
-    Task<bool> DeleteRegisteredUserFromRedisAsync(User user);
+    RedisUserUpdate HandleUserUpdateInRedis(UserUpdateRequest updateData, TokenType tokenType);
+    Task<bool> UpdateTtlUserUpdateByTokenTypeAsync(RedisUserUpdate userData, TokenType tokenType, TimeSpan ttl);
+    Task<bool> DeleteUserDataFromRedisByTokenTypeAsync(Guid id, string username, string email, TokenType tokenType);
 
     Task<string> ExecuteUserUpdateFromTokenAsync(User user, RedisUserUpdate userUpdate, RedisConfirmationToken token);
     
