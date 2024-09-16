@@ -8,10 +8,12 @@ using Microsoft.OpenApi.Models;
 
 using IdentityCore.Configuration;
 using IdentityCore.DAL.PostgreSQL;
-using IdentityCore.DAL.PostgreSQL.Repositories;
 using IdentityCore.DAL.PostgreSQL.Repositories.Base;
-using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
+using IdentityCore.DAL.PostgreSQL.Repositories.cache;
+using IdentityCore.DAL.PostgreSQL.Repositories.db;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.Base;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.cache;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.db;
 using IdentityCore.Managers;
 using IdentityCore.Managers.Interfaces;
 
@@ -68,9 +70,10 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
 });
 
 builder.Services.AddScoped<ICacheRepositoryBase, CacheRepositoryBase>();
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
-builder.Services.AddScoped<IConfirmationTokenRepository, ConfirmationTokenRepository>();
+builder.Services.AddScoped<IUserDbRepository, UserDbRepository>();
+builder.Services.AddScoped<IUserCacheRepository, UserCacheRepository>();
+builder.Services.AddScoped<IRefreshTokenDbRepository, RefreshTokenDbRepository>();
+builder.Services.AddScoped<ICfmTokenCacheRepository, CfmTokenCacheRepository>();
 
 builder.Services.AddScoped<IUserManager, UserManager>();
 builder.Services.AddScoped<IAuthenticationManager, AuthenticationManager>();

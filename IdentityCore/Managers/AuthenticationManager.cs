@@ -3,8 +3,8 @@ using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
 
 using IdentityCore.Configuration;
-using IdentityCore.DAL.PostgreSQL.Models;
-using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
+using IdentityCore.DAL.PostgreSQL.Models.db;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.db;
 using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models;
 using IdentityCore.Models.Response;
@@ -13,12 +13,12 @@ namespace IdentityCore.Managers;
 
 public class AuthenticationManager : IAuthenticationManager
 {
-    private readonly IRefreshTokenRepository _refTokenRepo;
+    private readonly IRefreshTokenDbRepository _refTokenDbRepo;
     private readonly IRefreshTokenManager _refTokenManager;
 
-    public AuthenticationManager(IRefreshTokenRepository refTokenRepo, IRefreshTokenManager refTokenManager)
+    public AuthenticationManager(IRefreshTokenDbRepository refTokenDbRepo, IRefreshTokenManager refTokenManager)
     {
-        _refTokenRepo = refTokenRepo;
+        _refTokenDbRepo = refTokenDbRepo;
         _refTokenManager = refTokenManager;
     }
     
@@ -74,11 +74,11 @@ public class AuthenticationManager : IAuthenticationManager
 
     public async Task<string> LogoutAsync(Guid userId, string refreshToken)
     {
-        var token = await _refTokenRepo.GetTokenByUserIdAsync(userId, refreshToken);
+        var token = await _refTokenDbRepo.GetTokenByUserIdAsync(userId, refreshToken);
         if (token is null)
             return "The user was not found or was deleted";
 
-        return await _refTokenRepo.DeleteAsync(token)
+        return await _refTokenDbRepo.DeleteAsync(token)
             ? string.Empty
             : "Error during deletion";
     }

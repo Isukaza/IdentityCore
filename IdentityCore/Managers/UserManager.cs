@@ -1,8 +1,11 @@
 using Helpers;
 using IdentityCore.Configuration;
-using IdentityCore.DAL.PostgreSQL.Models;
+using IdentityCore.DAL.PostgreSQL.Models.cache;
+using IdentityCore.DAL.PostgreSQL.Models.cache.cachePrefix;
+using IdentityCore.DAL.PostgreSQL.Models.db;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
-using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.cache;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.db;
 using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models;
 using IdentityCore.Models.Request;
@@ -13,13 +16,15 @@ public class UserManager : IUserManager
 {
     #region C-tor and fields
 
-    private readonly IUserRepository _userRepo;
-    private readonly IConfirmationTokenRepository _ctRepo;
+    private readonly IUserDbRepository _userDbRepo;
+    private readonly IUserCacheRepository _userCacheRepo;
+    private readonly ICfmTokenCacheRepository _ctRepo;
 
-
-    public UserManager(IUserRepository userRepo, IConfirmationTokenRepository ctRepo)
+    public UserManager(IUserDbRepository userDbRepo, IUserCacheRepository userCacheRepo,
+        ICfmTokenCacheRepository ctRepo)
     {
-        _userRepo = userRepo;
+        _userCacheRepo = userCacheRepo;
+        _userDbRepo = userDbRepo;
         _ctRepo = ctRepo;
     }
 
@@ -28,16 +33,57 @@ public class UserManager : IUserManager
     #region CRUD
 
     public async Task<User> GetUserByIdAsync(Guid id) =>
-        await _userRepo.GetUserByIdAsync(id);
+        await _userDbRepo.GetUserByIdAsync(id);
+
+    public async Task<User> GetUserByTokenTypeAsync(Guid id, TokenType tokenType)
+    {
+        return tokenType == TokenType.RegistrationConfirmation
+            ? await _userCacheRepo.GetUserByIdAsync<User>(RedisPrefixes.User.Registration, id)
+            : await _userDbRepo.GetUserByIdAsync(id);
+    }
+
+    public async Task<T> GetUserByIdAsync<T>(string prefix, Guid id) =>
+        await _userCacheRepo.GetUserByIdAsync<T>(prefix, id);
 
     public async Task<OperationResult<User>> GetUserSsoAsync(string email)
     {
-        var user = await _userRepo.GetUserByEmailAsync(email);
+        var user = await _userDbRepo.GetUserByEmailAsync(email);
         if (user is null
             || (user.Provider == Provider.Local && !await UpdateUserProviderAsync(user, Provider.GoogleWithPass)))
             return new OperationResult<User>("Error updating user to SSO provider");
 
         return new OperationResult<User>(user);
+    }
+
+    public RedisUserUpdate AddUserUpdateDataByTokenType(RedisUserUpdate userUpdateData, TokenType tokenType,
+        TimeSpan ttl)
+    {
+        var isUserUpdateRequestAdded = _userCacheRepo
+            .AddEntityToCache(RedisPrefixes.User.Update, userUpdateData.Id, userUpdateData, ttl);
+        if (!isUserUpdateRequestAdded)
+            return null;
+
+        bool isAdditionalMappingUpdated;
+        switch (tokenType)
+        {
+            case TokenType.UsernameChange:
+            {
+                isAdditionalMappingUpdated = _userCacheRepo
+                    .AddMappingToCache(RedisPrefixes.User.Name, userUpdateData.Username, ttl);
+                break;
+            }
+            case TokenType.EmailChangeOld:
+            {
+                isAdditionalMappingUpdated = _userCacheRepo
+                    .AddMappingToCache(RedisPrefixes.User.Email, userUpdateData.Email, ttl);
+                break;
+            }
+            default:
+                isAdditionalMappingUpdated = true;
+                break;
+        }
+
+        return isAdditionalMappingUpdated ? userUpdateData : null;
     }
 
     public async Task<User> CreateUserForRegistrationAsync(UserCreateRequest userData, Provider provider)
@@ -55,14 +101,14 @@ public class UserManager : IUserManager
         if (provider != Provider.Local)
         {
             user.IsActive = true;
-            return await _userRepo.CreateAsync(user);
+            return await _userDbRepo.CreateAsync(user);
         }
 
         user.Salt = UserHelper.GenerateSalt();
         user.Password = UserHelper.GetPasswordHash(userData.Password, user.Salt);
         user.IsActive = false;
 
-        return _userRepo.AddRegUserToRedis(user, TokenConfig.Values.RegistrationConfirmation) ? user : null;
+        return AddRegisteredUser(user, TokenConfig.Values.RegistrationConfirmation) ? user : null;
     }
 
     public async Task<OperationResult<User>> CreateUserSsoAsync(string email, string name, Provider provider)
@@ -82,46 +128,114 @@ public class UserManager : IUserManager
             : new OperationResult<User>(newUserSso);
     }
 
+    private bool AddRegisteredUser(User user, TimeSpan ttl)
+    {
+        var isUserAdded = _userCacheRepo.AddEntityToCache(RedisPrefixes.User.Registration, user.Id, user, ttl);
+        var isUsernameMapping = _userCacheRepo.AddMappingToCache(RedisPrefixes.User.Name, user.Username, ttl);
+        var isEmailMapping = _userCacheRepo.AddMappingToCache(RedisPrefixes.User.Email, user.Email, ttl);
+
+        return isUserAdded && isUsernameMapping && isEmailMapping;
+    }
+
     private async Task<bool> UpdateUserProviderAsync(User user, Provider provider)
     {
         user.Provider = provider;
-        return await _userRepo.UpdateAsync(user);
+        return await _userDbRepo.UpdateAsync(user);
     }
 
     public async Task<bool> DeleteUserAsync(User user) =>
-        user is not null && await _userRepo.DeleteAsync(user);
+        user is not null && await _userDbRepo.DeleteAsync(user);
 
-    #endregion
-
-    #region Redis
-
-    public async Task<User> GetRegUserFromRedisByIdAsync(Guid id) =>
-        await _userRepo.GetRegUserFromRedisByIdAsync(id);
-    
-    public async Task<RedisUserUpdate> GetUpdateUserFromRedisByIdAsync(Guid id) =>
-        await _userRepo.GetUpdateUserFromRedisByIdAsync(id);
-
-    public RedisUserUpdate SaveUserUpdateToRedis(UserUpdateRequest updateRequest, TokenType tokenType)
+    public async Task<bool> UpdateTtlUserUpdateByTokenTypeAsync(
+        RedisUserUpdate userData,
+        TokenType tokenType,
+        TimeSpan ttl)
     {
-        var redisUserUpdate = new RedisUserUpdate
-        {
-            Id = updateRequest.Id,
-            Username = updateRequest.Username,
-            Email = updateRequest.Email
-        };
+        var userCachePrefix = tokenType == TokenType.RegistrationConfirmation
+            ? RedisPrefixes.User.Registration
+            : RedisPrefixes.User.Update;
 
-        if (tokenType is TokenType.PasswordChange)
+        var isUserUpdateTtl = await _userCacheRepo.UpdateTtlEntityInCache(userCachePrefix, userData.Id.ToString(), ttl);
+        
+        bool isAdditionalMappingUpdated;
+        switch (tokenType)
         {
-            redisUserUpdate.Salt = UserHelper.GenerateSalt();
-            redisUserUpdate.Password = UserHelper.GetPasswordHash(updateRequest.NewPassword, redisUserUpdate.Salt);
+            case TokenType.RegistrationConfirmation:
+            {
+                var isUsernameUpdateTtl = await _userCacheRepo
+                    .UpdateTtlEntityInCache(RedisPrefixes.User.Name, userData.Username, ttl);
+                var isEmailUpdateTtl = await _userCacheRepo
+                    .UpdateTtlEntityInCache(RedisPrefixes.User.Email, userData.Email, ttl);
+
+                isAdditionalMappingUpdated = isUsernameUpdateTtl && isEmailUpdateTtl;
+                break;
+            }
+            case TokenType.UsernameChange:
+            {
+                var isUsernameUpdateTtl = await _userCacheRepo
+                    .UpdateTtlEntityInCache(RedisPrefixes.User.Name, userData.Username, ttl);
+                isAdditionalMappingUpdated = isUsernameUpdateTtl && isUserUpdateTtl;
+                break;
+            }
+            case TokenType.EmailChangeOld:
+            {
+                var isEmailUpdateTtl = await _userCacheRepo
+                    .UpdateTtlEntityInCache(RedisPrefixes.User.Email, userData.Email, ttl);
+                isAdditionalMappingUpdated = isEmailUpdateTtl && isUserUpdateTtl;
+                break;
+            }
+            default:
+                isAdditionalMappingUpdated = true;
+                break;
         }
 
-        var ttl = TokenConfig.GetTtlForTokenType(tokenType);
-        return _userRepo.AddToRedisUpdateRequest(redisUserUpdate, tokenType, ttl) ? redisUserUpdate : null;
+        return isUserUpdateTtl && isAdditionalMappingUpdated;
     }
 
-    public async Task<bool> DeleteRegisteredUserFromRedisAsync(User user) =>
-        user is not null && await _userRepo.DeleteRegUserFromRedisAsync(user);
+    public async Task<bool> DeleteUserDataByTokenTypeAsync(
+        Guid id,
+        string username,
+        string email,
+        TokenType tokenType)
+    {
+        var userCachePrefix = tokenType == TokenType.RegistrationConfirmation 
+            ? RedisPrefixes.User.Registration 
+            : RedisPrefixes.User.Update;
+
+        var isUserRemoved = await _userCacheRepo.RemoveEntityFromCache(userCachePrefix, id.ToString());
+        
+        bool isAdditionalMappingDeleted;
+        switch (tokenType)
+        {
+            case TokenType.RegistrationConfirmation:
+            {
+                var isUsernameRemoved = await _userCacheRepo
+                    .RemoveEntityFromCache(RedisPrefixes.User.Name, username);
+                var isEmailRemoved = await _userCacheRepo
+                    .RemoveEntityFromCache(RedisPrefixes.User.Email, email);
+
+                isAdditionalMappingDeleted = isUsernameRemoved && isEmailRemoved;
+                break;
+            }
+            case TokenType.UsernameChange:
+            {
+                isAdditionalMappingDeleted = await _userCacheRepo
+                    .RemoveEntityFromCache(RedisPrefixes.User.Name, username);
+                break;
+            }
+            case TokenType.EmailChangeOld or TokenType.EmailChangeNew:
+            {
+                isAdditionalMappingDeleted = await _userCacheRepo
+                    .RemoveEntityFromCache(RedisPrefixes.User.Email, email);
+                break;
+            }
+            default:
+                isAdditionalMappingDeleted = true;
+                break;
+        }
+
+        return isUserRemoved && isAdditionalMappingDeleted;
+    }
 
     #endregion
 
@@ -146,12 +260,17 @@ public class UserManager : IUserManager
     private async Task<string> HandleRegistrationConfirmation(User user, RedisConfirmationToken token)
     {
         var isTokenRemoved = await _ctRepo.DeleteFromRedisAsync(token);
-        var isUserRemoved = await _userRepo.DeleteRegUserFromRedisAsync(user);
+        var isUserRemoved = await DeleteUserDataByTokenTypeAsync(
+            user.Id,
+            user.Username,
+            user.Email,
+            token.TokenType);
+
         if (!isTokenRemoved || !isUserRemoved)
             return "Activation error";
 
         user.IsActive = true;
-        return await _userRepo.CreateAsync(user) is not null
+        return await _userDbRepo.CreateAsync(user) is not null
             ? string.Empty
             : "Activation error";
     }
@@ -165,13 +284,13 @@ public class UserManager : IUserManager
         token.TokenType = TokenType.EmailChangeNew;
         var ttl = TokenConfig.GetTtlForTokenType(TokenType.EmailChangeNew);
         var isTokenUpdated = _ctRepo.AddToRedis(token, ttl);
-        var isUserUpdated = await _userRepo.UpdateTtlUserUpdateAsync(userUpdate, token.TokenType, ttl);
+        var isUserUpdated = await UpdateTtlUserUpdateByTokenTypeAsync(userUpdate, token.TokenType, ttl);
 
         if (isTokenUpdated && isUserUpdated)
             return string.Empty;
 
         _ = await _ctRepo.DeleteFromRedisAsync(token);
-        _ = await _userRepo.DeleteUserUpdateDataFromRedisAsync(userUpdate, token.TokenType);
+        _ = await DeleteUserDataByTokenTypeAsync(userUpdate.Id, null, userUpdate.Email, token.TokenType);
 
         return "Error changing email";
     }
@@ -179,12 +298,14 @@ public class UserManager : IUserManager
     private async Task<string> HandleEmailChangeNew(User user, RedisUserUpdate userUpdate, RedisConfirmationToken token)
     {
         var isTokenRemoved = await _ctRepo.DeleteFromRedisAsync(token);
-        var isUserRemoved = await _userRepo.DeleteUserUpdateDataFromRedisAsync(userUpdate, token.TokenType);
+        var isUserRemoved =
+            await DeleteUserDataByTokenTypeAsync(userUpdate.Id, null, userUpdate.Email, token.TokenType);
+
         if (!isTokenRemoved || !isUserRemoved || string.IsNullOrEmpty(userUpdate.Email))
             return "An error occurred while changing email";
 
         user.Email = userUpdate.Email;
-        return await _userRepo.UpdateAsync(user)
+        return await _userDbRepo.UpdateAsync(user)
             ? string.Empty
             : "An error occurred while changing email";
     }
@@ -192,7 +313,9 @@ public class UserManager : IUserManager
     private async Task<string> HandlePasswordChange(User user, RedisUserUpdate userUpdate, RedisConfirmationToken token)
     {
         var isTokenRemoved = await _ctRepo.DeleteFromRedisAsync(token);
-        var isUserRemoved = await _userRepo.DeleteUserUpdateDataFromRedisAsync(userUpdate, token.TokenType);
+        var isUserRemoved =
+            await DeleteUserDataByTokenTypeAsync(userUpdate.Id, null, null, token.TokenType);
+
         if (!isTokenRemoved
             || !isUserRemoved
             || string.IsNullOrEmpty(userUpdate.Password)
@@ -201,7 +324,7 @@ public class UserManager : IUserManager
 
         user.Password = userUpdate.Password;
         user.Salt = userUpdate.Salt;
-        return await _userRepo.UpdateAsync(user)
+        return await _userDbRepo.UpdateAsync(user)
             ? string.Empty
             : "An error occurred while changing password";
     }
@@ -209,12 +332,14 @@ public class UserManager : IUserManager
     private async Task<string> HandleUsernameChange(User user, RedisUserUpdate userUpdate, RedisConfirmationToken token)
     {
         var isTokenRemoved = await _ctRepo.DeleteFromRedisAsync(token);
-        var isUserRemoved = await _userRepo.DeleteUserUpdateDataFromRedisAsync(userUpdate, token.TokenType);
+        var isUserRemoved =
+            await DeleteUserDataByTokenTypeAsync(userUpdate.Id, userUpdate.Username, null, token.TokenType);
+
         if (!isTokenRemoved || !isUserRemoved || string.IsNullOrEmpty(userUpdate.Username))
             return "An error occurred while changing username";
 
         user.Username = userUpdate.Username;
-        return await _userRepo.UpdateAsync(user)
+        return await _userDbRepo.UpdateAsync(user)
             ? string.Empty
             : "An error occurred while changing username";
     }
@@ -223,37 +348,20 @@ public class UserManager : IUserManager
 
     #region Validation
 
-    public async Task<bool> IsUserUpdateInProgressAsync(Guid id) =>
-        await _userRepo.IsUserUpdateInProgress(id);
-
-    private static bool IsSingleFieldProvided(UserUpdateRequest updateRequest)
-    {
-        var filledFieldsCount = 0;
-
-        if (!string.IsNullOrWhiteSpace(updateRequest.Username)) filledFieldsCount++;
-        if (!string.IsNullOrWhiteSpace(updateRequest.Email)) filledFieldsCount++;
-        if (!string.IsNullOrWhiteSpace(updateRequest.OldPassword)) filledFieldsCount++;
-
-        return filledFieldsCount == 1;
-    }
-
-    public async Task<bool> UserExistsByEmailAsync(string email) =>
-        await _userRepo.UserExistsByEmailAsync(email);
-
     public async Task<OperationResult<User>> ValidateUserUpdateAsync(UserUpdateRequest updateData)
     {
         if (!IsSingleFieldProvided(updateData))
             return new OperationResult<User>("Only one field can be provided for update");
 
         if (!string.IsNullOrWhiteSpace(updateData.Email)
-            && await _userRepo.UserExistsByEmailAsync(updateData.Email))
+            && await UserExistsByEmailAsync(updateData.Email))
             return new OperationResult<User>("Email is already taken");
 
         if (!string.IsNullOrWhiteSpace(updateData.Username)
-            && await _userRepo.UserExistsByUsernameAsync(updateData.Username))
+            && await UserExistsByUsernameAsync(updateData.Username))
             return new OperationResult<User>("A user with this username exists");
 
-        var user = await _userRepo.GetUserByIdAsync(updateData.Id);
+        var user = await _userDbRepo.GetUserByIdAsync(updateData.Id);
         if (user is null
             || (user.Provider == Provider.Google && !string.IsNullOrWhiteSpace(updateData.OldPassword))
             || (user.Provider != Provider.Local && !string.IsNullOrWhiteSpace(updateData.Email)))
@@ -273,7 +381,7 @@ public class UserManager : IUserManager
         if (string.IsNullOrWhiteSpace(loginRequest.Email) || string.IsNullOrWhiteSpace(loginRequest.Password))
             return new OperationResult<User>("Email or password is invalid");
 
-        var user = await _userRepo.GetUserByEmailAsync(loginRequest.Email);
+        var user = await _userDbRepo.GetUserByEmailAsync(loginRequest.Email);
         if (user is null || user.Provider == Provider.Google)
             return new OperationResult<User>("Email or password is invalid");
 
@@ -290,14 +398,36 @@ public class UserManager : IUserManager
             || string.IsNullOrWhiteSpace(userCreateRequest.Password))
             return "Invalid input data";
 
-        if (await _userRepo.UserExistsByEmailAsync(userCreateRequest.Email))
+        if (await UserExistsByEmailAsync(userCreateRequest.Email))
             return "Email is already taken";
 
-        if (await _userRepo.UserExistsByUsernameAsync(userCreateRequest.Username))
+        if (await UserExistsByUsernameAsync(userCreateRequest.Username))
             return "A user with this username exists";
 
         return string.Empty;
     }
+
+    public async Task<bool> IsUserUpdateInProgressAsync(Guid id) =>
+        await _userCacheRepo.IsUserUpdateInProgressAsync(id);
+
+    public async Task<bool> UserExistsByEmailAsync(string email) =>
+        await _userCacheRepo.UserExistsByEmailAsync(email)
+        || await _userDbRepo.GetUserByEmailAsync(email) is not null;
+
+    private static bool IsSingleFieldProvided(UserUpdateRequest updateRequest)
+    {
+        var filledFieldsCount = 0;
+
+        if (!string.IsNullOrWhiteSpace(updateRequest.Username)) filledFieldsCount++;
+        if (!string.IsNullOrWhiteSpace(updateRequest.Email)) filledFieldsCount++;
+        if (!string.IsNullOrWhiteSpace(updateRequest.OldPassword)) filledFieldsCount++;
+
+        return filledFieldsCount == 1;
+    }
+
+    private async Task<bool> UserExistsByUsernameAsync(string username) =>
+        await _userCacheRepo.UserExistsByUsernameAsync(username)
+        || await _userDbRepo.GetUserByUsernameAsync(username) is not null;
 
     #endregion
 
@@ -306,14 +436,14 @@ public class UserManager : IUserManager
     private async Task<string> GenerateUniqueUsernameAsync(string username)
     {
         username = username.Replace(" ", "_");
-        if (!await _userRepo.UserExistsByUsernameAsync(username))
+        if (!await UserExistsByUsernameAsync(username))
             return username;
 
         var random = new Random();
         do
         {
             var newUsername = $"{username}_{random.Next(0, 10000):D4}";
-            if (!await _userRepo.UserExistsByUsernameAsync(newUsername))
+            if (!await UserExistsByUsernameAsync(newUsername))
                 return newUsername;
         } while (true);
     }
