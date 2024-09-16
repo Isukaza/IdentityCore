@@ -9,16 +9,18 @@ namespace IdentityCore.Managers.Interfaces;
 public interface IUserManager
 {
     Task<User> GetUserByIdAsync(Guid id);
+    Task<T> GetUserByIdAsync<T>(string prefix, Guid id);
+    Task<User> GetUserByTokenTypeAsync(Guid id, TokenType tokenType);
     Task<OperationResult<User>> GetUserSsoAsync(string email);
+    
+    RedisUserUpdate AddUserUpdateDataByTokenType(RedisUserUpdate userUpdateData, TokenType tokenType, TimeSpan ttl);
     Task<User> CreateUserForRegistrationAsync(UserCreateRequest userData, Provider provider);
     Task<OperationResult<User>> CreateUserSsoAsync(string email, string name, Provider provider);
-    Task<bool> DeleteUserAsync(User user);
     
-    Task<User> GetRegUserFromRedisByIdAsync(Guid id);
-    Task<RedisUserUpdate> GetUpdateUserFromRedisByIdAsync(Guid id);
-    RedisUserUpdate HandleUserUpdateInRedis(UserUpdateRequest updateData, TokenType tokenType);
     Task<bool> UpdateTtlUserUpdateByTokenTypeAsync(RedisUserUpdate userData, TokenType tokenType, TimeSpan ttl);
-    Task<bool> DeleteUserDataFromRedisByTokenTypeAsync(Guid id, string username, string email, TokenType tokenType);
+    
+    Task<bool> DeleteUserAsync(User user);
+    Task<bool> DeleteUserDataByTokenTypeAsync(Guid id, string username, string email, TokenType tokenType);
 
     Task<string> ExecuteUserUpdateFromTokenAsync(User user, RedisUserUpdate userUpdate, RedisConfirmationToken token);
     

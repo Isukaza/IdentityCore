@@ -1,6 +1,7 @@
 using Helpers;
 using IdentityCore.Configuration;
 using IdentityCore.DAL.PostgreSQL.Models.cache;
+using IdentityCore.DAL.PostgreSQL.Models.cache.cachePrefix;
 using IdentityCore.DAL.PostgreSQL.Models.db;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.cache;
@@ -12,13 +13,15 @@ namespace IdentityCore.Managers;
 public class ConfirmationTokenManager : IConfirmationTokenManager
 {
     #region C-tor and fields
-    
-    private readonly IUserManager _userManager;
+
+    private readonly IUserCacheRepository _userCacheRepo;
     private readonly ICfmTokenCacheRepository _ctRepo;
 
-    public ConfirmationTokenManager(IUserManager userManager, ICfmTokenCacheRepository ctRepo)
+    public ConfirmationTokenManager(
+        IUserCacheRepository userCacheRepo,
+        ICfmTokenCacheRepository ctRepo)
     {
-        _userManager = userManager;
+        _userCacheRepo = userCacheRepo;
         _ctRepo = ctRepo;
     }
 
@@ -44,19 +47,6 @@ public class ConfirmationTokenManager : IConfirmationTokenManager
         return nextAvailableTime.ToString("yyyy-MM-ddTHH:mm:ssZ");
     }
 
-    public TokenType DetermineConfirmationTokenType(UserUpdateRequest updateRequest)
-    {
-        if (!string.IsNullOrWhiteSpace(updateRequest.Username))
-            return TokenType.UsernameChange;
-
-        if (!string.IsNullOrWhiteSpace(updateRequest.NewPassword))
-            return TokenType.PasswordChange;
-
-        return !string.IsNullOrWhiteSpace(updateRequest.Email)
-            ? TokenType.EmailChangeOld
-            : TokenType.Unknown;
-    }
-
     public RedisConfirmationToken CreateConfirmationToken(Guid id, TokenType tokenType)
     {
         var ttl = TokenConfig.GetTtlForTokenType(tokenType);
@@ -70,19 +60,14 @@ public class ConfirmationTokenManager : IConfirmationTokenManager
         return _ctRepo.AddToRedis(token, ttl) ? token : null;
     }
 
-    public async Task<RedisConfirmationToken> UpdateCfmTokenAsync(
-        RedisConfirmationToken token,
-        User user,
-        RedisUserUpdate userUpdate = null)
+    public async Task<RedisConfirmationToken> UpdateCfmTokenAsync(RedisConfirmationToken token)
     {
-        if (token == null || (token.TokenType != TokenType.RegistrationConfirmation && userUpdate == null))
+        if (token == null)
             return null;
 
         var ttl = TokenConfig.GetTtlForTokenType(token.TokenType);
         var isRemovedToken = await _ctRepo.DeleteFromRedisAsync(token);
-        var isUpdateTtl = await _userManager.UpdateTtlUserUpdateByTokenTypeAsync(userUpdate, token.TokenType, ttl);
-
-        if (!isRemovedToken || !isUpdateTtl)
+        if (!isRemovedToken)
             return null;
 
         if (DateTime.UtcNow - token.Modified >= MailConfig.Values.NextAttemptAvailableAfter)
@@ -91,9 +76,23 @@ public class ConfirmationTokenManager : IConfirmationTokenManager
         token.Value = UserHelper.GetToken(token.UserId);
         token.AttemptCount = ++token.AttemptCount;
         token.Modified = DateTime.UtcNow;
+        
         return _ctRepo.AddToRedis(token, ttl) ? token : null;
     }
 
+    public TokenType DetermineConfirmationTokenType(UserUpdateRequest updateRequest)
+    {
+        if (!string.IsNullOrWhiteSpace(updateRequest.Username))
+            return TokenType.UsernameChange;
+
+        if (!string.IsNullOrWhiteSpace(updateRequest.NewPassword))
+            return TokenType.PasswordChange;
+
+        return !string.IsNullOrWhiteSpace(updateRequest.Email)
+            ? TokenType.EmailChangeOld
+            : TokenType.Unknown;
+    }
+    
     public bool ValidateTokenTypeForRequest(TokenType tokenType, bool isRegistration)
     {
         return (isRegistration && tokenType == TokenType.RegistrationConfirmation)

@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 
 using Helpers;
 using IdentityCore.Configuration;
+using IdentityCore.DAL.PostgreSQL.Models.cache;
+using IdentityCore.DAL.PostgreSQL.Models.cache.cachePrefix;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
 using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models;
@@ -76,7 +78,7 @@ public class UserController : Controller
         var cfmToken = _ctManager.CreateConfirmationToken(user.Id, TokenType.RegistrationConfirmation);
         if (cfmToken is null)
         {
-            _ = await _userManager.DeleteUserDataFromRedisByTokenTypeAsync(
+            _ = await _userManager.DeleteUserDataByTokenTypeAsync(
                 user.Id,
                 user.Username,
                 user.Email,
@@ -121,7 +123,9 @@ public class UserController : Controller
         if (tokenType is TokenType.Unknown)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
 
-        var redisUserUpdate = _userManager.HandleUserUpdateInRedis(updateRequest, tokenType);
+        var ttl = TokenConfig.GetTtlForTokenType(tokenType);
+        var redisUserUpdate = _userManager
+            .AddUserUpdateDataByTokenType(updateRequest.ToRedisUserUpdate(), tokenType, ttl);
         if (redisUserUpdate is null)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
 
@@ -130,13 +134,13 @@ public class UserController : Controller
         var sendMailError = await _mailManager
             .SendEmailAsync(result.Data.Email, tokenType, cfmLink, result.Data, redisUserUpdate);
 
+        var sendCfmTokenResponse = new ReSendCfmTokenResponse
+        {
+            UserId = cfmToken.UserId,
+            TokenType = cfmToken.TokenType
+        };
         return string.IsNullOrEmpty(sendMailError)
-            ? await StatusCodes.Status200OK
-                .ResultState("Awaiting confirmation by mail", new ReSendCfmTokenResponse
-                {
-                    UserId = cfmToken.UserId,
-                    TokenType = cfmToken.TokenType
-                })
+            ? await StatusCodes.Status200OK.ResultState("Awaiting confirmation by mail", sendCfmTokenResponse)
             : await StatusCodes.Status500InternalServerError.ResultState("Not send mail");
     }
 
@@ -164,7 +168,8 @@ public class UserController : Controller
         if (user is null)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
 
-        var userUpdate = await _userManager.GetUpdateUserFromRedisByIdAsync(tokenDb.UserId);
+        var userUpdate = await _userManager
+            .GetUserByIdAsync<RedisUserUpdate>(RedisPrefixes.User.Update, tokenDb.UserId);
         if (userUpdate is null)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
 
@@ -277,13 +282,13 @@ public class UserController : Controller
         if (tokenDb is null)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
 
-        var user = tokenDb.TokenType == TokenType.RegistrationConfirmation
-            ? await _userManager.GetRegUserFromRedisByIdAsync(tokenDb.UserId)
-            : await _userManager.GetUserByIdAsync(tokenDb.UserId);
+        var user = await _userManager.GetUserByTokenTypeAsync(tokenDb.UserId, tokenDb.TokenType);
         if (user is null)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
 
-        var userUpdateData = await _userManager.GetUpdateUserFromRedisByIdAsync(tokenDb.UserId);
+        var userUpdateData = await _userManager
+            .GetUserByIdAsync<RedisUserUpdate>(RedisPrefixes.User.Update, tokenDb.UserId);
+
         if (userUpdateData is null && tokenDb.TokenType != TokenType.RegistrationConfirmation)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
 
@@ -306,23 +311,28 @@ public class UserController : Controller
         if (!string.IsNullOrEmpty(timeForNextAttempt))
             return await StatusCodes.Status429TooManyRequests.ResultState(timeForNextAttempt);
 
-        var user = tokenDb.TokenType == TokenType.RegistrationConfirmation
-            ? await _userManager.GetRegUserFromRedisByIdAsync(tokenDb.UserId)
-            : await _userManager.GetUserByIdAsync(tokenDb.UserId);
+        var user = await _userManager.GetUserByTokenTypeAsync(tokenDb.UserId, tokenDb.TokenType);
         if (user is null)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
 
         var userUpdate = tokenDb.TokenType != TokenType.RegistrationConfirmation
-            ? await _userManager.GetUpdateUserFromRedisByIdAsync(tokenDb.UserId)
+            ? await _userManager.GetUserByIdAsync<RedisUserUpdate>(RedisPrefixes.User.Update, tokenDb.UserId)
             : null;
         if (tokenDb.TokenType != TokenType.RegistrationConfirmation && userUpdate == null)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
 
-        var updatedToken = await _ctManager.UpdateCfmTokenAsync(tokenDb, user, userUpdate);
+        var updatedToken = await _ctManager.UpdateCfmTokenAsync(tokenDb);
         if (updatedToken is null)
             return await StatusCodes.Status500InternalServerError
                 .ResultState("Failed to send verification token");
 
+        var ttl = TokenConfig.GetTtlForTokenType(tokenDb.TokenType);
+        var updateData = tokenDb.TokenType == TokenType.RegistrationConfirmation 
+            ? user.ToRedisUserUpdate() 
+            : userUpdate;
+
+        _ = await _userManager.UpdateTtlUserUpdateByTokenTypeAsync(updateData, tokenDb.TokenType, ttl);
+        
         var cfmLink = MailConfig.GetConfirmationLink(updatedToken.Value, updatedToken.TokenType);
         var email = tokenDb.TokenType == TokenType.EmailChangeNew && userUpdate is not null
             ? userUpdate.Email

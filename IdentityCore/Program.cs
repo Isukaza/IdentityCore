@@ -71,6 +71,7 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
 
 builder.Services.AddScoped<ICacheRepositoryBase, CacheRepositoryBase>();
 builder.Services.AddScoped<IUserDbRepository, UserDbRepository>();
+builder.Services.AddScoped<IUserCacheRepository, UserCacheRepository>();
 builder.Services.AddScoped<IRefreshTokenDbRepository, RefreshTokenDbRepository>();
 builder.Services.AddScoped<ICfmTokenCacheRepository, CfmTokenCacheRepository>();
 
