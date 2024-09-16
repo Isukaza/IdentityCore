@@ -1,7 +1,8 @@
 using System.Net;
 
 using IdentityCore.Configuration;
-using IdentityCore.DAL.PostgreSQL.Models;
+using IdentityCore.DAL.PostgreSQL.Models.cache;
+using IdentityCore.DAL.PostgreSQL.Models.db;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
 using IdentityCore.Managers.Interfaces;
 

@@ -1,9 +1,9 @@
-using IdentityCore.DAL.PostgreSQL.Models;
+using IdentityCore.DAL.PostgreSQL.Models.cache;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
 
-namespace IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
+namespace IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.cache;
 
-public interface IConfirmationTokenRepository
+public interface ICfmTokenCacheRepository
 {
     Task<RedisConfirmationToken> GetFromRedisAsync(string key, TokenType tokenType);
     Task<RedisConfirmationToken> GetFromByUserIdRedisAsync(Guid userId, TokenType tokenType);

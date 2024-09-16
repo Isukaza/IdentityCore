@@ -10,7 +10,7 @@ using JetBrains.Annotations;
 
 using IdentityCore.Controllers;
 using IdentityCore.DAL.PostgreSQL;
-using IdentityCore.DAL.PostgreSQL.Models;
+using IdentityCore.DAL.PostgreSQL.Models.db;
 using IdentityCore.Models.Request;
 
 using Moq;

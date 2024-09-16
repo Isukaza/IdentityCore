@@ -1,18 +1,18 @@
-using IdentityCore.DAL.PostgreSQL.Models;
+using IdentityCore.DAL.PostgreSQL.Models.cache;
+using IdentityCore.DAL.PostgreSQL.Models.cache.cachePrefix;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
-using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.Base;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.cache;
 
-namespace IdentityCore.DAL.PostgreSQL.Repositories;
+namespace IdentityCore.DAL.PostgreSQL.Repositories.cache;
 
-public class ConfirmationTokenRepository : IConfirmationTokenRepository
+public class CfmTokenCacheRepository : ICfmTokenCacheRepository
 {
     #region C-tor
 
-    private const string RedisKeyPrefix = "CT";
     private readonly ICacheRepositoryBase _cacheRepo;
 
-    public ConfirmationTokenRepository(ICacheRepositoryBase cacheRepo)
+    public CfmTokenCacheRepository(ICacheRepositoryBase cacheRepo)
     {
         _cacheRepo = cacheRepo;
     }
@@ -21,20 +21,20 @@ public class ConfirmationTokenRepository : IConfirmationTokenRepository
 
     public async Task<RedisConfirmationToken> GetFromRedisAsync(string key, TokenType tokenType)
     {
-        var keyRedis = $"{RedisKeyPrefix}:{tokenType}:{key}";
+        var keyRedis = $"{RedisPrefixes.ConfirmationToken.Prefix}:{tokenType}:{key}";
         var tokenDb = await _cacheRepo.GetAsync<RedisConfirmationToken>(keyRedis);
         return tokenDb != null && tokenDb.TokenType == tokenType ? tokenDb : null;
     }
 
     public async Task<RedisConfirmationToken> GetFromByUserIdRedisAsync(Guid userId, TokenType tokenType)
     {
-        var keyUserId = $"{RedisKeyPrefix}:{tokenType}:{userId}";
+        var keyUserId = $"{RedisPrefixes.ConfirmationToken.Prefix}:{tokenType}:{userId}";
         var tokenValue = await _cacheRepo.GetAsync<string>(keyUserId);
 
         if (string.IsNullOrEmpty(tokenValue))
             return null;
 
-        var keyTokenValue = $"{RedisKeyPrefix}:{tokenType}:{tokenValue}";
+        var keyTokenValue = $"{RedisPrefixes.ConfirmationToken.Prefix}:{tokenType}:{tokenValue}";
         var tokenDb = await _cacheRepo.GetAsync<RedisConfirmationToken>(keyTokenValue);
 
         return tokenDb != null && tokenDb.TokenType == tokenType ? tokenDb : null;
@@ -42,10 +42,10 @@ public class ConfirmationTokenRepository : IConfirmationTokenRepository
 
     public bool AddToRedis(RedisConfirmationToken token, TimeSpan ttl)
     {
-        var keyTokenValue = $"{RedisKeyPrefix}:{token.TokenType}:{token.Value}";
+        var keyTokenValue = $"{RedisPrefixes.ConfirmationToken.Prefix}:{token.TokenType}:{token.Value}";
         var isTokenAdded = _cacheRepo.Add(keyTokenValue, token, ttl);
 
-        var keyUserId = $"{RedisKeyPrefix}:{token.TokenType}:{token.UserId}";
+        var keyUserId = $"{RedisPrefixes.ConfirmationToken.Prefix}:{token.TokenType}:{token.UserId}";
         var isTokenUserIdAdded = _cacheRepo.Add(keyUserId, token.Value, ttl);
 
         return isTokenAdded && isTokenUserIdAdded;
@@ -53,10 +53,10 @@ public class ConfirmationTokenRepository : IConfirmationTokenRepository
 
     public async Task<bool> DeleteFromRedisAsync(RedisConfirmationToken token)
     {
-        var keyTokenValue = $"{RedisKeyPrefix}:{token.TokenType}:{token.Value}";
+        var keyTokenValue = $"{RedisPrefixes.ConfirmationToken.Prefix}:{token.TokenType}:{token.Value}";
         var isTokenRemoved = await _cacheRepo.DeleteAsync(keyTokenValue);
 
-        var keyUserId = $"{RedisKeyPrefix}:{token.TokenType}:{token.UserId}";
+        var keyUserId = $"{RedisPrefixes.ConfirmationToken.Prefix}:{token.TokenType}:{token.UserId}";
         var isTokenUserIdRemoved = await _cacheRepo.DeleteAsync(keyUserId);
 
         return isTokenRemoved && isTokenUserIdRemoved;

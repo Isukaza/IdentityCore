@@ -1,5 +1,6 @@
-using IdentityCore.DAL.PostgreSQL.Models;
+using IdentityCore.DAL.PostgreSQL.Models.cache;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
+using IdentityCore.Models.Request;
 
 namespace IdentityCore.Managers.Interfaces;
 
@@ -11,10 +12,8 @@ public interface IConfirmationTokenManager
 
     RedisConfirmationToken CreateConfirmationToken(Guid id, TokenType tokenType);
 
-    Task<RedisConfirmationToken> UpdateCfmTokenAsync(
-        RedisConfirmationToken token,
-        User user,
-        RedisUserUpdate userUpdate = null);
+    Task<RedisConfirmationToken> UpdateCfmTokenAsync(RedisConfirmationToken token);
 
+    TokenType DetermineConfirmationTokenType(UserUpdateRequest updateRequest);
     bool ValidateTokenTypeForRequest(TokenType tokenType, bool isRegistration);
 }
