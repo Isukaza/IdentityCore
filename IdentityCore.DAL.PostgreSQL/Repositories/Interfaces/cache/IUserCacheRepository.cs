@@ -1,5 +1,3 @@
-using IdentityCore.DAL.PostgreSQL.Models.db;
-
 namespace IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.cache;
 
 public interface IUserCacheRepository

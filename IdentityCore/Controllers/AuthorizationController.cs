@@ -88,7 +88,7 @@ public class AuthorizationController : ControllerBase
         var payload = await _googleManager.VerifyGoogleTokenAsync(tokenResponse.IdToken);
         if (payload == null)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid Google token.");
-
+        
         var userSso = await _userManager.UserExistsByEmailAsync(payload.Email)
             ? await _userManager.GetUserSsoAsync(payload.Email)
             : await _userManager.CreateUserSsoAsync(payload.Email, payload.Name, Provider.Google);
