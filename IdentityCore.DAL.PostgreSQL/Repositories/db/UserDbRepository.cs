@@ -1,6 +1,5 @@
 using IdentityCore.DAL.PostgreSQL.Models.db;
 using IdentityCore.DAL.PostgreSQL.Repositories.Base;
-using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.db;
 using Microsoft.EntityFrameworkCore;
 
