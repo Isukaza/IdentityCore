@@ -105,12 +105,14 @@ public static class MockFactory
             return mockGoogleManager.Object;
         });
 
+        services.AddScoped<ICacheRepositoryBase, CacheRepositoryBase>();
         services.AddScoped<IUserDbRepository, UserDbRepository>();
+        services.AddScoped<IUserCacheRepository, UserCacheRepository>();
         services.AddScoped<IRefreshTokenDbRepository, RefreshTokenDbRepository>();
         services.AddScoped<ICfmTokenCacheRepository, CfmTokenCacheRepository>();
-        services.AddScoped<ICacheRepositoryBase, CacheRepositoryBase>();
 
         services.AddScoped<IUserManager, UserManager>();
+        services.AddScoped<IAuthenticationManager, AuthenticationManager>();
         services.AddScoped<IRefreshTokenManager, RefreshTokenManager>();
         services.AddScoped<IConfirmationTokenManager, ConfirmationTokenManager>();
         services.AddScoped<IMailManager, MailManager>();
