@@ -10,9 +10,12 @@ public interface IConfirmationTokenManager
     Task<RedisConfirmationToken> GetTokenByUserIdAsync(Guid userId, TokenType tokenType);
     string GetNextAttemptTime(RedisConfirmationToken token);
 
+    bool AddToken(RedisConfirmationToken token, TimeSpan ttl);
     RedisConfirmationToken CreateConfirmationToken(Guid id, TokenType tokenType);
 
     Task<RedisConfirmationToken> UpdateCfmTokenAsync(RedisConfirmationToken token);
+
+    Task<bool> DeleteTokenAsync(RedisConfirmationToken token);
 
     TokenType DetermineConfirmationTokenType(UserUpdateRequest updateRequest);
     bool ValidateTokenTypeForRequest(TokenType tokenType, bool isRegistration);
