@@ -5,7 +5,7 @@ namespace IdentityCore.DAL.PostgreSQL.Models.cache;
 public record RedisUserUpdate
 {
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public Guid Id { get; init; }
+    public required Guid Id { get; init; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Username { get; init; }
