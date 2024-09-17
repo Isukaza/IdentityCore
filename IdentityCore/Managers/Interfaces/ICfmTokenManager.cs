@@ -11,12 +11,12 @@ public interface ICfmTokenManager
     string GetNextAttemptTime(RedisConfirmationToken token);
 
     bool AddToken(RedisConfirmationToken token, TimeSpan ttl);
-    RedisConfirmationToken CreateConfirmationToken(Guid id, TokenType tokenType);
+    RedisConfirmationToken CreateToken(Guid id, TokenType tokenType);
 
-    Task<RedisConfirmationToken> UpdateCfmTokenAsync(RedisConfirmationToken token);
+    Task<RedisConfirmationToken> UpdateTokenAsync(RedisConfirmationToken token);
 
     Task<bool> DeleteTokenAsync(RedisConfirmationToken token);
 
-    TokenType DetermineConfirmationTokenType(UserUpdateRequest updateRequest);
+    TokenType DetermineTokenType(UserUpdateRequest updateRequest);
     bool ValidateTokenTypeForRequest(TokenType tokenType, bool isRegistration);
 }

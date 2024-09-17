@@ -67,7 +67,7 @@ public class CfmTokenManager : ICfmTokenManager
         return isTokenRemoved && isTokenUserIdRemoved;
     }
 
-    public RedisConfirmationToken CreateConfirmationToken(Guid id, TokenType tokenType)
+    public RedisConfirmationToken CreateToken(Guid id, TokenType tokenType)
     {
         var ttl = TokenConfig.GetTtlForTokenType(tokenType);
         var token = new RedisConfirmationToken
@@ -80,7 +80,7 @@ public class CfmTokenManager : ICfmTokenManager
         return AddToken(token, ttl) ? token : null;
     }
 
-    public async Task<RedisConfirmationToken> UpdateCfmTokenAsync(RedisConfirmationToken token)
+    public async Task<RedisConfirmationToken> UpdateTokenAsync(RedisConfirmationToken token)
     {
         if (token == null)
             return null;
@@ -100,7 +100,7 @@ public class CfmTokenManager : ICfmTokenManager
         return AddToken(token, ttl) ? token : null;
     }
 
-    public TokenType DetermineConfirmationTokenType(UserUpdateRequest updateRequest)
+    public TokenType DetermineTokenType(UserUpdateRequest updateRequest)
     {
         if (!string.IsNullOrWhiteSpace(updateRequest.Username))
             return TokenType.UsernameChange;

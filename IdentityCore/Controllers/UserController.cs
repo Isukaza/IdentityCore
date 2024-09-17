@@ -75,7 +75,7 @@ public class UserController : Controller
         if (user is null)
             return await StatusCodes.Status500InternalServerError.ResultState("Error creating user");
 
-        var cfmToken = _ctManager.CreateConfirmationToken(user.Id, TokenType.RegistrationConfirmation);
+        var cfmToken = _ctManager.CreateToken(user.Id, TokenType.RegistrationConfirmation);
         if (cfmToken is null)
         {
             _ = await _userManager.DeleteUserDataByTokenTypeAsync(
@@ -119,7 +119,7 @@ public class UserController : Controller
         if (!result.Success)
             return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
 
-        var tokenType = _ctManager.DetermineConfirmationTokenType(updateRequest);
+        var tokenType = _ctManager.DetermineTokenType(updateRequest);
         if (tokenType is TokenType.Unknown)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
 
@@ -129,7 +129,7 @@ public class UserController : Controller
         if (redisUserUpdate is null)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
 
-        var cfmToken = _ctManager.CreateConfirmationToken(result.Data.Id, tokenType);
+        var cfmToken = _ctManager.CreateToken(result.Data.Id, tokenType);
         var cfmLink = MailConfig.GetConfirmationLink(cfmToken.Value, cfmToken.TokenType);
         var sendMailError = await _mailManager
             .SendEmailAsync(result.Data.Email, tokenType, cfmLink, result.Data, redisUserUpdate);
@@ -321,7 +321,7 @@ public class UserController : Controller
         if (tokenDb.TokenType != TokenType.RegistrationConfirmation && userUpdate == null)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
 
-        var updatedToken = await _ctManager.UpdateCfmTokenAsync(tokenDb);
+        var updatedToken = await _ctManager.UpdateTokenAsync(tokenDb);
         if (updatedToken is null)
             return await StatusCodes.Status500InternalServerError
                 .ResultState("Failed to send verification token");
