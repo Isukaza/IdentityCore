@@ -8,13 +8,13 @@ using IdentityCore.Models.Request;
 
 namespace IdentityCore.Managers;
 
-public class ConfirmationTokenManager : IConfirmationTokenManager
+public class CfmTokenManager : ICfmTokenManager
 {
     #region C-tor and fields
 
     private readonly ICfmTokenCacheRepository _ctCacheRepo;
 
-    public ConfirmationTokenManager(ICfmTokenCacheRepository ctCacheRepo)
+    public CfmTokenManager(ICfmTokenCacheRepository ctCacheRepo)
     {
         _ctCacheRepo = ctCacheRepo;
     }

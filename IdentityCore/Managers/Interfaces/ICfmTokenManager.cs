@@ -4,7 +4,7 @@ using IdentityCore.Models.Request;
 
 namespace IdentityCore.Managers.Interfaces;
 
-public interface IConfirmationTokenManager
+public interface ICfmTokenManager
 {
     Task<RedisConfirmationToken> GetTokenAsync(string token, TokenType tokenType);
     Task<RedisConfirmationToken> GetTokenByUserIdAsync(Guid userId, TokenType tokenType);

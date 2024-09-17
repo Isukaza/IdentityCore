@@ -23,9 +23,9 @@ public class UserController : Controller
 
     private readonly IUserManager _userManager;
     private readonly IMailManager _mailManager;
-    private readonly IConfirmationTokenManager _ctManager;
+    private readonly ICfmTokenManager _ctManager;
 
-    public UserController(IUserManager userManager, IMailManager mailManager, IConfirmationTokenManager ctManager)
+    public UserController(IUserManager userManager, IMailManager mailManager, ICfmTokenManager ctManager)
     {
         _userManager = userManager;
         _mailManager = mailManager;
