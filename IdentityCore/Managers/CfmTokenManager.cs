@@ -23,6 +23,9 @@ public class CfmTokenManager : ICfmTokenManager
 
     public async Task<RedisConfirmationToken> GetTokenAsync(string token, TokenType tokenType)
     {
+        if (DataHelper.IsTokenValid(token))
+            return null;
+
         var tokenDb = await _ctCacheRepo.GetTokenByTokenType<RedisConfirmationToken>(token, tokenType);
         return tokenDb != null && tokenDb.TokenType == tokenType ? tokenDb : null;
     }
@@ -39,6 +42,9 @@ public class CfmTokenManager : ICfmTokenManager
 
     public string GetNextAttemptTime(RedisConfirmationToken token)
     {
+        if (token == null)
+            return "Invalid token";
+
         var timeDifference = DateTime.UtcNow - token.Modified;
         if ((token.AttemptCount < MailConfig.Values.MaxAttemptsConfirmationResend
              || timeDifference > MailConfig.Values.NextAttemptAvailableAfter)
@@ -51,16 +57,11 @@ public class CfmTokenManager : ICfmTokenManager
         return nextAvailableTime.ToString("yyyy-MM-ddTHH:mm:ssZ");
     }
 
-    public bool AddToken(RedisConfirmationToken token, TimeSpan ttl)
-    {
-        var isTokenAdded = _ctCacheRepo.Add(token.Value, token, token.TokenType, ttl);
-        var isTokenUserIdAdded = _ctCacheRepo.Add(token.UserId.ToString(), token.Value, token.TokenType, ttl);
-
-        return isTokenAdded && isTokenUserIdAdded;
-    }
-
     public async Task<bool> DeleteTokenAsync(RedisConfirmationToken token)
     {
+        if (token == null)
+            return false;
+
         var isTokenRemoved = await _ctCacheRepo.DeleteAsync(token.Value, token.TokenType);
         var isTokenUserIdRemoved = await _ctCacheRepo.DeleteAsync(token.UserId.ToString(), token.TokenType);
 
@@ -102,6 +103,9 @@ public class CfmTokenManager : ICfmTokenManager
 
     public TokenType DetermineTokenType(UserUpdateRequest updateRequest)
     {
+        if (updateRequest == null)
+            return TokenType.Unknown;
+
         if (!string.IsNullOrWhiteSpace(updateRequest.Username))
             return TokenType.UsernameChange;
 
@@ -119,5 +123,16 @@ public class CfmTokenManager : ICfmTokenManager
             return tokenType == TokenType.RegistrationConfirmation;
 
         return tokenType != TokenType.RegistrationConfirmation && tokenType != TokenType.Unknown;
+    }
+
+    private bool AddToken(RedisConfirmationToken token, TimeSpan ttl)
+    {
+        if (token == null)
+            return false;
+
+        var isTokenAdded = _ctCacheRepo.Add(token.Value, token, token.TokenType, ttl);
+        var isTokenUserIdAdded = _ctCacheRepo.Add(token.UserId.ToString(), token.Value, token.TokenType, ttl);
+
+        return isTokenAdded && isTokenUserIdAdded;
     }
 }

@@ -10,7 +10,6 @@ public interface ICfmTokenManager
     Task<RedisConfirmationToken> GetTokenByUserIdAsync(Guid userId, TokenType tokenType);
     string GetNextAttemptTime(RedisConfirmationToken token);
 
-    bool AddToken(RedisConfirmationToken token, TimeSpan ttl);
     RedisConfirmationToken CreateToken(Guid id, TokenType tokenType);
 
     Task<RedisConfirmationToken> UpdateTokenAsync(RedisConfirmationToken token);

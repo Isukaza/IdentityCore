@@ -7,6 +7,7 @@ public static class DataHelper
 {
     private const string Chars =
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789!@#$%^&*()-_";
+    private const int Sha512ByteSize = 64;
 
     #region GET
 
@@ -50,6 +51,20 @@ public static class DataHelper
             throw new InvalidOperationException("Generated string is empty, which indicates a logical error.");
 
         return str;
+    }
+
+    #endregion
+
+    #region Validators
+
+    public static bool IsTokenValid(string token)
+    {
+        var bufferSize = (int)Math.Ceiling(token.Length * 3.0 / 4.0);
+        var buffer = new Span<byte>(new byte[bufferSize]);
+        if (Convert.TryFromBase64String(token, buffer, out var bytes))
+            return bytes == Sha512ByteSize;
+
+        return false;
     }
 
     #endregion
