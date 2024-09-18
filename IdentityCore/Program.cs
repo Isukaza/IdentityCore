@@ -78,7 +78,7 @@ builder.Services.AddScoped<ICfmTokenCacheRepository, CfmTokenCacheRepository>();
 builder.Services.AddScoped<IUserManager, UserManager>();
 builder.Services.AddScoped<IAuthenticationManager, AuthenticationManager>();
 builder.Services.AddScoped<IRefreshTokenManager, RefreshTokenManager>();
-builder.Services.AddScoped<IConfirmationTokenManager, ConfirmationTokenManager>();
+builder.Services.AddScoped<ICfmTokenManager, CfmTokenManager>();
 builder.Services.AddScoped<IMailManager, MailManager>();
 builder.Services.AddScoped<IGoogleManager, GoogleManager>();
 

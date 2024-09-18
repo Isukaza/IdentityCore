@@ -12,18 +12,18 @@ public interface IUserManager
     Task<T> GetUserByIdAsync<T>(string prefix, Guid id);
     Task<User> GetUserByTokenTypeAsync(Guid id, TokenType tokenType);
     Task<OperationResult<User>> GetUserSsoAsync(string email);
-    
+
     RedisUserUpdate AddUserUpdateDataByTokenType(RedisUserUpdate userUpdateData, TokenType tokenType, TimeSpan ttl);
     Task<User> CreateUserForRegistrationAsync(UserCreateRequest userData, Provider provider);
     Task<OperationResult<User>> CreateUserSsoAsync(string email, string name, Provider provider);
-    
+
     Task<bool> UpdateTtlUserUpdateByTokenTypeAsync(RedisUserUpdate userData, TokenType tokenType, TimeSpan ttl);
-    
+
     Task<bool> DeleteUserAsync(User user);
     Task<bool> DeleteUserDataByTokenTypeAsync(Guid id, string username, string email, TokenType tokenType);
 
-    Task<string> ExecuteUserUpdateFromTokenAsync(User user, RedisUserUpdate userUpdate, RedisConfirmationToken token);
-    
+    Task<string> ExecuteUserUpdateFromTokenAsync(User user, RedisUserUpdate userUpdData, RedisConfirmationToken token);
+
     Task<bool> IsUserUpdateInProgressAsync(Guid id);
     Task<bool> UserExistsByEmailAsync(string email);
     Task<OperationResult<User>> ValidateUserUpdateAsync(UserUpdateRequest updateData);

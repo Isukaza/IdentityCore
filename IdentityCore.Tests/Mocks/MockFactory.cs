@@ -114,7 +114,7 @@ public static class MockFactory
         services.AddScoped<IUserManager, UserManager>();
         services.AddScoped<IAuthenticationManager, AuthenticationManager>();
         services.AddScoped<IRefreshTokenManager, RefreshTokenManager>();
-        services.AddScoped<IConfirmationTokenManager, ConfirmationTokenManager>();
+        services.AddScoped<ICfmTokenManager, CfmTokenManager>();
         services.AddScoped<IMailManager, MailManager>();
 
         return services;
