@@ -113,9 +113,11 @@ public class CfmTokenManager : ICfmTokenManager
             : TokenType.Unknown;
     }
 
-    public bool ValidateTokenTypeForRequest(TokenType tokenType, bool isRegistration)
+    public bool ValidateTokenTypeForRequest(TokenType tokenType, bool isRegistrationProcess)
     {
-        return (isRegistration && tokenType == TokenType.RegistrationConfirmation)
-               || (!isRegistration && tokenType != TokenType.RegistrationConfirmation);
+        if (isRegistrationProcess)
+            return tokenType == TokenType.RegistrationConfirmation;
+
+        return tokenType != TokenType.RegistrationConfirmation && tokenType != TokenType.Unknown;
     }
 }

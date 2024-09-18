@@ -18,5 +18,5 @@ public interface ICfmTokenManager
     Task<bool> DeleteTokenAsync(RedisConfirmationToken token);
 
     TokenType DetermineTokenType(UserUpdateRequest updateRequest);
-    bool ValidateTokenTypeForRequest(TokenType tokenType, bool isRegistration);
+    bool ValidateTokenTypeForRequest(TokenType tokenType, bool isRegistrationProcess);
 }
