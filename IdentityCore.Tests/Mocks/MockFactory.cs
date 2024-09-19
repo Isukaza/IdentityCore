@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 
 using IdentityCore.DAL.PostgreSQL;
 using IdentityCore.DAL.PostgreSQL.Repositories.Base;
@@ -118,5 +119,99 @@ public static class MockFactory
         services.AddScoped<IMailManager, MailManager>();
 
         return services;
+    }
+
+    public static IConfigurationRoot GetMockConfiguration()
+    {
+        var mockConfiguration = new Mock<IConfigurationRoot>();
+
+        const string hostGroupName = "Host";
+        mockConfiguration
+            .Setup(c => c[$"{hostGroupName}:URL"])
+            .Returns("https://localhost:7109");
+        mockConfiguration
+            .Setup(c => c[$"{hostGroupName}:RegistrationConfirmationPath"])
+            .Returns("/User/cfm-reg-token");
+        mockConfiguration
+            .Setup(c => c[$"{hostGroupName}:ConfirmationTokenPath"])
+            .Returns("/User/cfm-token");
+
+        const string jwtGroupName = "JWT";
+        mockConfiguration
+            .Setup(c => c[$"{jwtGroupName}:Issuer"])
+            .Returns("AuthOptions.ISSUER");
+        mockConfiguration
+            .Setup(c => c[$"{jwtGroupName}:Audience"])
+            .Returns("AuthOptions.AUDIENCE");
+        mockConfiguration
+            .Setup(c => c[$"{jwtGroupName}:Expires"])
+            .Returns("512");
+        mockConfiguration
+            .Setup(c => c[$"{jwtGroupName}:Key"])
+            .Returns("VVY$%V#v3vt4q4tB$%QY$%ny45nwb2qv4y34uy45u");
+
+        const string refreshTokenGroupName = "RefreshToken";
+        mockConfiguration
+            .Setup(c => c[$"{refreshTokenGroupName}:Expires"])
+            .Returns("30");
+        mockConfiguration
+            .Setup(c => c[$"{refreshTokenGroupName}:MaxSessions"])
+            .Returns("5");
+
+        const string tokenConfigGroupName = "TokenConfig";
+        mockConfiguration
+            .Setup(c => c[$"{tokenConfigGroupName}:TTL:RegistrationConfirmation"])
+            .Returns("00:15:00");
+        mockConfiguration
+            .Setup(c => c[$"{tokenConfigGroupName}:TTL:EmailChangeOld"])
+            .Returns("00:15:00");
+        mockConfiguration
+            .Setup(c => c[$"{tokenConfigGroupName}:TTL:EmailChangeNew"])
+            .Returns("00:15:00");
+        mockConfiguration
+            .Setup(c => c[$"{tokenConfigGroupName}:TTL:PasswordChange"])
+            .Returns("00:15:00");
+        mockConfiguration
+            .Setup(c => c[$"{tokenConfigGroupName}:TTL:UsernameChange"])
+            .Returns("00:15:00");
+
+        const string mailGroupName = "Mail";
+        mockConfiguration
+            .Setup(c => c[$"{mailGroupName}:Mail"])
+            .Returns("admin@skillforge.click");
+        mockConfiguration
+            .Setup(c => c[$"{mailGroupName}:Region"])
+            .Returns("eu-central-1");
+        mockConfiguration
+            .Setup(c => c[$"{mailGroupName}:AwsAccessKeyId"])
+            .Returns("keyId");
+        mockConfiguration
+            .Setup(c => c[$"{mailGroupName}:AwsSecretAccessKey"])
+            .Returns("key");
+        mockConfiguration
+            .Setup(c => c[$"{mailGroupName}:MaxAttemptsConfirmationResend"])
+            .Returns("3");
+        mockConfiguration
+            .Setup(c => c[$"{mailGroupName}:NextAttemptAvailableAfter"])
+            .Returns("00:00:20");
+        mockConfiguration
+            .Setup(c => c[$"{mailGroupName}:MinIntervalBetweenAttempts"])
+            .Returns("00:00:10");
+
+        const string googleAuthGroupName = "GoogleAuth";
+        mockConfiguration
+            .Setup(c => c[$"{googleAuthGroupName}:ClientId"])
+            .Returns("<google client id>");
+        mockConfiguration
+            .Setup(c => c[$"{googleAuthGroupName}:ClientSecret"])
+            .Returns("<google client secret>");
+        mockConfiguration
+            .Setup(c => c[$"{googleAuthGroupName}:RedirectUri"])
+            .Returns("<your callback endpoint to process the code>");
+        mockConfiguration
+            .Setup(c => c[$"{googleAuthGroupName}:Scope"])
+            .Returns("<your need scope>");
+
+        return mockConfiguration.Object;
     }
 }
