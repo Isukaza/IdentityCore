@@ -23,7 +23,7 @@ public class CfmTokenManager : ICfmTokenManager
 
     public async Task<RedisConfirmationToken> GetTokenAsync(string token, TokenType tokenType)
     {
-        if (DataHelper.IsTokenValid(token))
+        if (!DataHelper.IsTokenValid(token) || tokenType == TokenType.Unknown)
             return null;
 
         var tokenDb = await _ctCacheRepo.GetTokenByTokenType<RedisConfirmationToken>(token, tokenType);
@@ -70,6 +70,9 @@ public class CfmTokenManager : ICfmTokenManager
 
     public RedisConfirmationToken CreateToken(Guid id, TokenType tokenType)
     {
+        if (tokenType == TokenType.Unknown)
+            return null;
+        
         var ttl = TokenConfig.GetTtlForTokenType(tokenType);
         var token = new RedisConfirmationToken
         {
@@ -127,9 +130,6 @@ public class CfmTokenManager : ICfmTokenManager
 
     private bool AddToken(RedisConfirmationToken token, TimeSpan ttl)
     {
-        if (token == null)
-            return false;
-
         var isTokenAdded = _ctCacheRepo.Add(token.Value, token, token.TokenType, ttl);
         var isTokenUserIdAdded = _ctCacheRepo.Add(token.UserId.ToString(), token.Value, token.TokenType, ttl);
 

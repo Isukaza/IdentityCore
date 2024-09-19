@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using JetBrains.Annotations;
 
+using IdentityCore.Configuration;
 using IdentityCore.Controllers;
 using IdentityCore.DAL.PostgreSQL;
 using IdentityCore.DAL.PostgreSQL.Models.db;
@@ -38,6 +39,9 @@ public class AuthorizationControllerTest
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
     {
+        var mockConfiguration = Mocks.MockFactory.GetMockConfiguration();
+        ConfigBase.SetConfiguration(mockConfiguration);
+        
         _httpContextMock = Mocks.MockFactory.GetHttpContextMock();
         _dbContext = _httpContextMock.Object.RequestServices.GetService<IdentityCoreDbContext>();
         _controller = Mocks.MockFactory.GetController<AuthorizationController>(_httpContextMock.Object);
