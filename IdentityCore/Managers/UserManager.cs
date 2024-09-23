@@ -6,6 +6,7 @@ using IdentityCore.DAL.PostgreSQL.Models.db;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.cache;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.db;
+using IdentityCore.DAL.PostgreSQL.Roles;
 using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models;
 using IdentityCore.Models.Request;
@@ -95,6 +96,7 @@ public class UserManager : IUserManager
             Email = userData.Email,
             Password = null,
             Salt = null,
+            Role = UserRole.User,
             Provider = provider
         };
 
