@@ -70,17 +70,17 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
 });
 
 builder.Services.AddScoped<ICacheRepositoryBase, CacheRepositoryBase>();
-builder.Services.AddScoped<IUserDbRepository, UserDbRepository>();
-builder.Services.AddScoped<IUserCacheRepository, UserCacheRepository>();
-builder.Services.AddScoped<IRefreshTokenDbRepository, RefreshTokenDbRepository>();
 builder.Services.AddScoped<ICfmTokenCacheRepository, CfmTokenCacheRepository>();
+builder.Services.AddScoped<IRefreshTokenDbRepository, RefreshTokenDbRepository>();
+builder.Services.AddScoped<IUserCacheRepository, UserCacheRepository>();
+builder.Services.AddScoped<IUserDbRepository, UserDbRepository>();
 
-builder.Services.AddScoped<IUserManager, UserManager>();
 builder.Services.AddScoped<IAuthenticationManager, AuthenticationManager>();
-builder.Services.AddScoped<IRefreshTokenManager, RefreshTokenManager>();
 builder.Services.AddScoped<ICfmTokenManager, CfmTokenManager>();
-builder.Services.AddScoped<IMailManager, MailManager>();
 builder.Services.AddScoped<IGoogleManager, GoogleManager>();
+builder.Services.AddScoped<IMailManager, MailManager>();
+builder.Services.AddScoped<IRefreshTokenManager, RefreshTokenManager>();
+builder.Services.AddScoped<IUserManager, UserManager>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
