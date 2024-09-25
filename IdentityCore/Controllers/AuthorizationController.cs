@@ -3,13 +3,13 @@ using Microsoft.AspNetCore.Mvc;
 
 using Helpers;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
+using IdentityCore.DAL.PostgreSQL.Roles;
 using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models.Request;
 using IdentityCore.Models.Response;
 
 namespace IdentityCore.Controllers;
 
-[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class AuthorizationController : ControllerBase
@@ -110,12 +110,18 @@ public class AuthorizationController : ControllerBase
     /// <response code="200">Successful refresh.</response>
     /// <response code="400">Invalid input data.</response>
     [HttpPost("refresh")]
+    [Authorize]
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest refreshTokenRequest)
     {
+        var userId = HttpContext.User.Claims.GetUserId();
+        if (!userId.HasValue)
+            return await StatusCodes.Status403Forbidden
+                .ResultState("Authorization failed due to an invalid or missing role in the provided token");
+        
         var result = await _refreshTokenManager
-            .ValidationRefreshTokenAsync(refreshTokenRequest.UserId, refreshTokenRequest.RefreshToken);
+            .ValidationRefreshTokenAsync(userId.Value, refreshTokenRequest.RefreshToken);
 
         if (!result.Success)
             return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
@@ -134,10 +140,16 @@ public class AuthorizationController : ControllerBase
     /// <response code="200">Successful logout.</response>
     /// <response code="400">Error in tokens or user deleted.</response>
     [HttpPost("logout")]
+    [Authorize]
     [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Logout([FromBody] LogoutRequest logoutRequest)
     {
-        var errorMessage = await _authenticationManager.LogoutAsync(logoutRequest.UserId, logoutRequest.RefreshToken);
+        var userId = HttpContext.User.Claims.GetUserId();
+        if (!userId.HasValue)
+            return await StatusCodes.Status403Forbidden
+                .ResultState("Authorization failed due to an invalid or missing role in the provided token");
+        
+        var errorMessage = await _authenticationManager.LogoutAsync(userId.Value, logoutRequest.RefreshToken);
         return string.IsNullOrEmpty(errorMessage)
             ? await StatusCodes.Status200OK.ResultState()
             : await StatusCodes.Status400BadRequest.ResultState(errorMessage);
