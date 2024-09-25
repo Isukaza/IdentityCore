@@ -54,7 +54,7 @@ public class UserController : Controller
             HttpContext.User.Claims.ToList(),
             userId,
             UserRole.Admin,
-            (userRole, compareRole) => userRole < compareRole);
+            (userRole, compareRole) => userRole >= compareRole);
         if (!string.IsNullOrEmpty(error))
             return await StatusCodes.Status403Forbidden.ResultState(error);
 
@@ -278,7 +278,7 @@ public class UserController : Controller
             HttpContext.User.Claims.ToList(),
             userId,
             UserRole.SuperAdmin,
-            (userRole, compareRole) => userRole != compareRole);
+            (userRole, compareRole) => userRole == compareRole);
         if (!string.IsNullOrEmpty(error))
             return await StatusCodes.Status403Forbidden.ResultState(error);
 

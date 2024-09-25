@@ -142,15 +142,25 @@ public class UserManager : IUserManager
 
     public async Task<bool> UpdateUser(User user, SuUserUpdateRequest updateData)
     {
-        if (user is null || updateData is null)
+        if (user is null || updateData is null || !IsAnyFieldProvided(updateData))
             return false;
-        
+
         if (!string.IsNullOrWhiteSpace(updateData.Username))
+        {
+            if (await UserExistsByUsernameAsync(updateData.Username))
+                return false;
+
             user.Username = updateData.Username;
-        
+        }
+
         if (!string.IsNullOrWhiteSpace(updateData.Email))
+        {
+            if (await UserExistsByEmailAsync(updateData.Email))
+                return false;
+
             user.Email = updateData.Email;
-        
+        }
+
         if (updateData.Role.HasValue)
             user.Role = updateData.Role.Value;
 
@@ -159,10 +169,10 @@ public class UserManager : IUserManager
             user.Salt = UserHelper.GenerateSalt();
             user.Password = UserHelper.GetPasswordHash(updateData.NewPassword, user.Salt);
         }
-        
+
         return await _userDbRepo.UpdateAsync(user);
     }
-    
+
     private async Task<bool> UpdateUserProviderAsync(User user, Provider provider)
     {
         user.Provider = provider;
@@ -340,7 +350,7 @@ public class UserManager : IUserManager
     public async Task<bool> UserExistsByEmailAsync(string email) =>
         await _userCacheRepo.UserExistsByEmailAsync(email)
         || await _userDbRepo.GetUserByEmailAsync(email) is not null;
-    
+
     public async Task<bool> UserExistsByIdAsync(Guid id) =>
         await _userDbRepo.GetUserByIdAsync(id) is not null;
 
@@ -365,7 +375,7 @@ public class UserManager : IUserManager
                 throw new ArgumentNullException(nameof(compareRole),
                     "compareRole cannot be null when comparison is provided.");
 
-            if (userIdFromClaim.Value != userId && comparison(role.Value, compareRole.Value))
+            if (userIdFromClaim.Value != userId && !comparison(role.Value, compareRole.Value))
                 return "You do not have permission to access other users' data";
         }
 
@@ -453,6 +463,18 @@ public class UserManager : IUserManager
         if (updateRequest.Role != null) filledFieldsCount++;
 
         return filledFieldsCount == 1;
+    }
+
+    private static bool IsAnyFieldProvided(SuUserUpdateRequest updateRequest)
+    {
+        var filledFieldsCount = 0;
+
+        if (!string.IsNullOrWhiteSpace(updateRequest.Username)) filledFieldsCount++;
+        if (!string.IsNullOrWhiteSpace(updateRequest.Email)) filledFieldsCount++;
+        if (!string.IsNullOrWhiteSpace(updateRequest.NewPassword)) filledFieldsCount++;
+        if (updateRequest.Role != null) filledFieldsCount++;
+
+        return filledFieldsCount > 0;
     }
 
     private async Task<bool> UserExistsByUsernameAsync(string username) =>
