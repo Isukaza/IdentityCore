@@ -7,9 +7,9 @@ public class RefreshTokenRequest
 {
     [Required(ErrorMessage = "UserId is required")]
     [NotEmptyGuid("Incorrect ID")]
-    public required Guid UserId { get; set; }
+    public required Guid UserId { get; init; }
 
     [Required(ErrorMessage = "RefreshToken is required")]
     [ValidToken]
-    public required string RefreshToken { get; set; }
+    public required string RefreshToken { get; init; }
 }

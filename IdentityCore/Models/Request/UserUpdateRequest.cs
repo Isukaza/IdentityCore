@@ -17,20 +17,29 @@ public class UserUpdateRequest
     public string Email { get; init; }
 
     [DataType(DataType.Password)]
-    [StringLength(255, ErrorMessage = "The password must be between 12 and 255 characters long.", MinimumLength = 12)]
-    [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$", ErrorMessage = "The current password does not match the format")]
+    [StringLength(
+        ValidationConstants.PassMaxLength,
+        ErrorMessage = ValidationConstants.PassErrorMessage,
+        MinimumLength = ValidationConstants.PassMinLength)]
+    [RegularExpression(ValidationConstants.PassRegex, ErrorMessage = ValidationConstants.PassFormatErrorMessage)]
     [BothOrNone("NewPassword", "Both OldPassword and NewPassword must be provided if one of them is set.")]
     public string OldPassword { get; init; }
 
     [DataType(DataType.Password)]
-    [StringLength(255, ErrorMessage = "The password must be between 12 and 255 characters long.", MinimumLength = 12)]
-    [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$", ErrorMessage = "The new password does not match the format")]
+    [StringLength(
+        ValidationConstants.PassMaxLength,
+        ErrorMessage = ValidationConstants.PassErrorMessage,
+        MinimumLength = ValidationConstants.PassMinLength)]
+    [RegularExpression(ValidationConstants.PassRegex, ErrorMessage = ValidationConstants.PassFormatErrorMessage)]
     [BothOrNone("OldPassword", "Both OldPassword and NewPassword must be provided if one of them is set.")]
     public string NewPassword { get; init; }
 
     [DataType(DataType.Password)]
-    [StringLength(255, ErrorMessage = "The password must be between 12 and 255 characters long.", MinimumLength = 12)]
-    [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$", ErrorMessage = "Confirm new password does not match format")]
-    [Compare("NewPassword", ErrorMessage = "NewPassword and ConfirmNewPassword must match.")]
+    [StringLength(
+        ValidationConstants.PassMaxLength,
+        ErrorMessage = ValidationConstants.PassErrorMessage,
+        MinimumLength = ValidationConstants.PassMinLength)]
+    [RegularExpression(ValidationConstants.PassRegex, ErrorMessage = ValidationConstants.PassFormatErrorMessage)]
+    [Compare("NewPassword", ErrorMessage = ValidationConstants.PassMismatchErrorMessage)]
     public string ConfirmNewPassword { get; init; }
 }
