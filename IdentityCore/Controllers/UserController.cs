@@ -39,19 +39,28 @@ public class UserController : Controller
     /// <summary>
     /// Retrieves user information by user ID.
     /// </summary>
-    /// <param name="useId">The unique identifier of the user.</param>
+    /// <param name="userId">The unique identifier of the user.</param>
     /// <returns>Returns the user information if found.</returns>
     /// <response code="200">User information retrieved successfully.</response>
     /// <response code="401">Unauthorized. The user is not authenticated.</response>
+    /// <response code="403">Forbidden. User does not have permission to access the requested information.</response>
     /// <response code="404">User with the specified ID not found.</response>
-    [HttpGet("{useId:guid}")]
+    [HttpGet("{userId:guid}")]
     [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetUser(Guid useId)
+    public async Task<IActionResult> GetUser(Guid userId)
     {
-        var user = await _userManager.GetUserByIdAsync(useId);
+        var error = _userManager.ValidateUserIdentity(
+            HttpContext.User.Claims.ToList(),
+            userId,
+            UserRole.Admin,
+            (userRole, compareRole) => userRole < compareRole);
+        if (!string.IsNullOrEmpty(error))
+            return await StatusCodes.Status403Forbidden.ResultState(error);
+
+        var user = await _userManager.GetUserByIdAsync(userId);
         return user != null
             ? await StatusCodes.Status200OK.ResultState("User info", user.ToUserResponse())
-            : await StatusCodes.Status404NotFound.ResultState($"User by id:{useId} not found");
+            : await StatusCodes.Status404NotFound.ResultState($"User by id:{userId} not found");
     }
 
     /// <summary>
@@ -199,17 +208,29 @@ public class UserController : Controller
     /// <returns>Returns the status of the deletion.</returns>
     /// <response code="200">User deleted successfully.</response>
     /// <response code="401">Unauthorized. The user is not authenticated.</response>
+    /// <response code="403">Forbidden. User does not have permission to delete the requested user.</response>
     /// <response code="404">The user with the specified ID was not found.</response>
     /// <response code="500">An error occurred during the user deletion.</response>
     [HttpDelete("delete")]
     [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
-    public async Task<IActionResult> DeleteUser(Guid userId)
+    public async Task<IActionResult> DeleteUser([Required] Guid userId)
     {
-        var user = await _userManager.GetUserByIdAsync(userId);
-        if (user is null)
+        var error = _userManager.ValidateUserIdentity(
+            HttpContext.User.Claims.ToList(),
+            userId,
+            UserRole.SuperAdmin,
+            (userRole, compareRole) => userRole != compareRole);
+        if (!string.IsNullOrEmpty(error))
+            return await StatusCodes.Status403Forbidden.ResultState(error);
+
+        var userToDeleted = await _userManager.GetUserByIdAsync(userId);
+        if (userToDeleted is null)
             return await StatusCodes.Status404NotFound.ResultState("User not found");
 
-        return await _userManager.DeleteUserAsync(user)
+        if (userToDeleted.Role == UserRole.SuperAdmin)
+            return await StatusCodes.Status403Forbidden.ResultState("SU cannot be deleted");
+
+        return await _userManager.DeleteUserAsync(userToDeleted)
             ? await StatusCodes.Status200OK.ResultState("User deleted")
             : await StatusCodes.Status500InternalServerError.ResultState("Error when deleting user");
     }
