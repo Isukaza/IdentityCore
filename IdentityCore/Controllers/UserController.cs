@@ -307,6 +307,7 @@ public class UserController : Controller
     /// <response code="500">An error occurred during token confirmation.</response>
     [AllowAnonymous]
     [HttpGet("cfm-reg-token")]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
     public async Task<IActionResult> ConfirmationRegToken([FromQuery] CfmTokenRequest tokenRequest)
     {
         return await HandleTokenConfirmation(tokenRequest, true);
@@ -322,6 +323,7 @@ public class UserController : Controller
     /// <response code="401">Unauthorized. The user is not authenticated.</response>
     /// <response code="500">An error occurred during token confirmation.</response>
     [HttpGet("cfm-token")]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
     public async Task<IActionResult> ConfirmationToken([FromQuery] CfmTokenRequest tokenRequest)
     {
         return await HandleTokenConfirmation(tokenRequest, false);
@@ -337,6 +339,7 @@ public class UserController : Controller
     /// <response code="500">An error occurred during the token resend process.</response>
     [AllowAnonymous]
     [HttpPost("resend-cfm-reg-token")]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
     public async Task<IActionResult> ResendCfmRegToken(ReSendCfmTokenRequest tokenRequest)
     {
         return await HandleTokenResend(tokenRequest, true);
@@ -350,8 +353,10 @@ public class UserController : Controller
     /// <response code="200">Token resent successfully.</response>
     /// <response code="400">The provided token or user data is invalid.</response>
     /// <response code="401">Unauthorized. The user is not authenticated.</response>
+    /// <response code="403">Forbidden. The user does not have permission to access this resource.</response>
     /// <response code="500">An error occurred during the token resend process.</response>
     [HttpPost("resend-cfm-token")]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
     public async Task<IActionResult> ResendCfmToken(ReSendCfmTokenRequest tokenRequest)
     {
         var error = _userManager.ValidateUserIdentity(HttpContext.User.Claims.ToList(), tokenRequest.UserId);
