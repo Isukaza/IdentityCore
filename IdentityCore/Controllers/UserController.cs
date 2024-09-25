@@ -7,6 +7,7 @@ using IdentityCore.Configuration;
 using IdentityCore.DAL.PostgreSQL.Models.cache;
 using IdentityCore.DAL.PostgreSQL.Models.cache.cachePrefix;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
+using IdentityCore.DAL.PostgreSQL.Roles;
 using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models;
 using IdentityCore.Models.Request;
@@ -113,15 +114,72 @@ public class UserController : Controller
     /// </summary>
     /// <param name="updateRequest">The new details of the user.</param>
     /// <returns>Returns the status of the update.</returns>
-    /// <response code="200">User updated successfully, awaiting email confirmation.</response>
+    /// <response code="200">User updated successfully.</response>
     /// <response code="400">The update data provided is invalid.</response>
     /// <response code="401">Unauthorized. The user is not authenticated.</response>
-    /// <response code="429">A user update is already in progress.</response>
-    /// <response code="500">An error occurred during the user update.</response>
+    /// <response code="403">Forbidden. The user does not have permission to perform this action.</response>
+    /// <response code="404">User with the specified ID not found.</response>
+    /// <response code="500">An error occurred during the user update process.</response>
     [HttpPut("update")]
-    [ProducesResponseType(typeof(ReSendCfmTokenResponse), StatusCodes.Status200OK)]
-    public async Task<IActionResult> UpdateUser([FromBody] UserUpdateRequest updateRequest)
+    [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)}, {nameof(UserRole.Admin)}")]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
+    public async Task<IActionResult> UserUpdate([FromBody] SuUserUpdateRequest updateRequest)
     {
+        var userIdFromClaim = HttpContext.User.Claims.GetUserId();
+        var role = HttpContext.User.Claims.GetUserRole();
+        if (role is null || userIdFromClaim is null)
+            return await StatusCodes.Status403Forbidden
+                .ResultState("Authorization failed due to an invalid or missing role in the provided token");
+
+        var tokenType = _ctManager.DetermineTokenType(updateRequest);
+        if (tokenType is TokenType.Unknown)
+            return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
+
+        if (role == UserRole.Admin && tokenType != TokenType.RoleChange)
+            return await StatusCodes.Status403Forbidden.ResultState("Admin can only change roles");
+
+        if (role == UserRole.Admin && (updateRequest.Role != UserRole.Manager || updateRequest.Role != UserRole.User))
+            return await StatusCodes.Status403Forbidden.ResultState("Admin can't assign higher than manager");
+
+        if (!await _userManager.UserExistsByIdAsync(updateRequest.Id))
+            return await StatusCodes.Status404NotFound.ResultState("User not found");
+
+        var result = await _userManager.ValidateUserUpdateAsync(updateRequest);
+        if (!result.Success)
+            return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
+
+        if (result.Data.Role == UserRole.SuperAdmin && role == UserRole.Admin)
+            return await StatusCodes.Status403Forbidden.ResultState("You don't have access to SU update");
+
+        if (result.Data.Role == UserRole.SuperAdmin
+            && role == UserRole.SuperAdmin
+            && userIdFromClaim != updateRequest.Id)
+            return await StatusCodes.Status403Forbidden.ResultState("Cannot update other SU");
+
+        return await _userManager.UpdateUser(result.Data, updateRequest)
+            ? await StatusCodes.Status200OK.ResultState("Operation was successfully completed")
+            : await StatusCodes.Status500InternalServerError.ResultState("Error updating user");
+    }
+
+    /// <summary>
+    /// Initiates a request to update the data of an existing user, and sends a request for email confirmation.
+    /// </summary>
+    /// <param name="updateRequest">The new details of the user.</param>
+    /// <returns>Returns the status of the update.</returns>
+    /// <response code="200">User updated successfully, awaiting email confirmation.</response>
+    /// <response code="400">The update data provided is invalid or does not meet validation criteria.</response>
+    /// <response code="401">Unauthorized. The user is not authenticated.</response>
+    /// <response code="403">Forbidden. The user does not have permission to access or update the requested data.</response>
+    /// <response code="429">A user update is already in progress. Please complete the current update process.</response>
+    /// <response code="500">An error occurred during the user update process, or the email could not be sent.</response>
+    [HttpPut("request-update")]
+    [ProducesResponseType(typeof(ReSendCfmTokenResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> RequestUserUpdate([FromBody] UserUpdateRequest updateRequest)
+    {
+        var error = _userManager.ValidateUserIdentity(HttpContext.User.Claims.ToList(), updateRequest.Id);
+        if (!string.IsNullOrEmpty(error))
+            return await StatusCodes.Status403Forbidden.ResultState(error);
+
         if (await _userManager.IsUserUpdateInProgressAsync(updateRequest.Id))
             return await StatusCodes.Status429TooManyRequests.ResultState("Complete the current update process");
 
@@ -130,7 +188,7 @@ public class UserController : Controller
             return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
 
         var tokenType = _ctManager.DetermineTokenType(updateRequest);
-        if (tokenType is TokenType.Unknown)
+        if (tokenType is TokenType.Unknown || tokenType is TokenType.RoleChange)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
 
         var redisUserUpdateData = updateRequest.ToRedisUserUpdate();
@@ -151,7 +209,7 @@ public class UserController : Controller
         };
         return string.IsNullOrEmpty(sendMailError)
             ? await StatusCodes.Status200OK.ResultState("Awaiting confirmation by mail", cfmTokenResponse)
-            : await StatusCodes.Status500InternalServerError.ResultState("Not send mail");
+            : await StatusCodes.Status500InternalServerError.ResultState("Failed to send mail");
     }
 
     /// <summary>
