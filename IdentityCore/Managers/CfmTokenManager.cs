@@ -4,7 +4,7 @@ using IdentityCore.DAL.PostgreSQL.Models.cache;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.cache;
 using IdentityCore.Managers.Interfaces;
-using IdentityCore.Models.Request;
+using IdentityCore.Models.Interface;
 
 namespace IdentityCore.Managers;
 
