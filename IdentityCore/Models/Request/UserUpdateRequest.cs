@@ -1,10 +1,13 @@
 using Helpers.ValidationAttributes;
+using IdentityCore.Configuration.Constants;
+using IdentityCore.DAL.PostgreSQL.Roles;
+using IdentityCore.Models.Interface;
 
 namespace IdentityCore.Models.Request;
 
 using System.ComponentModel.DataAnnotations;
 
-public class UserUpdateRequest
+public class UserUpdateRequest : IUserUpdate
 {
     [Required(ErrorMessage = "ID is required")]
     [NotEmptyGuid("Incorrect ID")]
@@ -15,6 +18,8 @@ public class UserUpdateRequest
 
     [EmailAddress(ErrorMessage = "Invalid Email Address")]
     public string Email { get; init; }
+
+    public UserRole? Role { get; init; }
 
     [DataType(DataType.Password)]
     [StringLength(

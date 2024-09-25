@@ -104,7 +104,7 @@ public class CfmTokenManager : ICfmTokenManager
         return AddToken(token, ttl) ? token : null;
     }
 
-    public TokenType DetermineTokenType(UserUpdateRequest updateRequest)
+    public TokenType DetermineTokenType(IUserUpdate updateRequest)
     {
         if (updateRequest == null)
             return TokenType.Unknown;
@@ -114,6 +114,9 @@ public class CfmTokenManager : ICfmTokenManager
 
         if (!string.IsNullOrWhiteSpace(updateRequest.NewPassword))
             return TokenType.PasswordChange;
+
+        if (updateRequest.Role != null)
+            return TokenType.RoleChange;
 
         return !string.IsNullOrWhiteSpace(updateRequest.Email)
             ? TokenType.EmailChangeOld
