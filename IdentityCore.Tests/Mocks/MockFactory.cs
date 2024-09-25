@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -14,6 +16,8 @@ using IdentityCore.DAL.PostgreSQL.Repositories.db;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.Base;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.cache;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.db;
+using IdentityCore.DAL.PostgreSQL.Models.db;
+using IdentityCore.DAL.PostgreSQL.Roles;
 using IdentityCore.Managers;
 using IdentityCore.Managers.Interfaces;
 
@@ -213,5 +217,21 @@ public static class MockFactory
             .Returns("<your need scope>");
 
         return mockConfiguration.Object;
+    }
+    
+    public static void MoqUserClaims(Mock<HttpContext> httpContextMock, User user)
+    {
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new(ClaimTypes.Role, nameof(UserRole.SuperAdmin))
+        };
+
+        var claimsIdentity = new ClaimsIdentity(claims, "JwtBearer");
+        var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
+
+        httpContextMock
+            .Setup(context => context.User)
+            .Returns(claimsPrincipal);
     }
 }
