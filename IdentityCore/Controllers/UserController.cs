@@ -151,7 +151,6 @@ public class UserController : Controller
     /// <remarks>
     /// This method should be called only after the old email address has been confirmed during the email change process.
     /// </remarks>
-    /// <param name="userId">The unique identifier of the user.</param>
     /// <returns>Returns the status of the email confirmation process.</returns>
     /// <response code="200">Confirmation email sent successfully.</response>
     /// <response code="400">The provided token or user data is invalid.</response>
@@ -159,13 +158,18 @@ public class UserController : Controller
     /// <response code="500">An error occurred during the email confirmation process.</response>
     [HttpGet("send-new-email-confirmation")]
     [ProducesResponseType(typeof(ReSendCfmTokenResponse), StatusCodes.Status200OK)]
-    public async Task<IActionResult> SendNewEmailConfirmation([Required] Guid userId)
+    public async Task<IActionResult> SendNewEmailConfirmation()
     {
-        var tokenDb = await _ctManager.GetTokenByUserIdAsync(userId, TokenType.EmailChangeNew);
-        if (tokenDb is null || tokenDb.UserId != userId)
+        var userId = HttpContext.User.Claims.GetUserId();
+        if (!userId.HasValue)
+            return await StatusCodes.Status403Forbidden
+                .ResultState("Authorization failed due to an invalid or missing role in the provided token");
+
+        var tokenDb = await _ctManager.GetTokenByUserIdAsync(userId.Value, TokenType.EmailChangeNew);
+        if (tokenDb is null || tokenDb.UserId != userId.Value)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
 
-        var user = await _userManager.GetUserByIdAsync(userId);
+        var user = await _userManager.GetUserByIdAsync(userId.Value);
         if (user is null)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
 
@@ -271,6 +275,10 @@ public class UserController : Controller
     [HttpPost("resend-cfm-token")]
     public async Task<IActionResult> ResendCfmToken(ReSendCfmTokenRequest tokenRequest)
     {
+        var error = _userManager.ValidateUserIdentity(HttpContext.User.Claims.ToList(), tokenRequest.UserId);
+        if (!string.IsNullOrEmpty(error))
+            return await StatusCodes.Status403Forbidden.ResultState(error);
+
         return await HandleTokenResend(tokenRequest, false);
     }
 
