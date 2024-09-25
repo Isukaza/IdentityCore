@@ -222,6 +222,7 @@ public class UserController : Controller
     /// <response code="200">Confirmation email sent successfully.</response>
     /// <response code="400">The provided token or user data is invalid.</response>
     /// <response code="401">Unauthorized. The user is not authenticated.</response>
+    /// <response code="403">Forbidden. The user does not have permission to access the requested information.</response>
     /// <response code="500">An error occurred during the email confirmation process.</response>
     [HttpGet("send-new-email-confirmation")]
     [ProducesResponseType(typeof(ReSendCfmTokenResponse), StatusCodes.Status200OK)]
