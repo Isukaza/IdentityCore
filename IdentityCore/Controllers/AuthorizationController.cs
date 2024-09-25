@@ -3,13 +3,13 @@ using Microsoft.AspNetCore.Mvc;
 
 using Helpers;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
+using IdentityCore.DAL.PostgreSQL.Roles;
 using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models.Request;
 using IdentityCore.Models.Response;
 
 namespace IdentityCore.Controllers;
 
-[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class AuthorizationController : ControllerBase
@@ -36,16 +36,16 @@ public class AuthorizationController : ControllerBase
     #endregion
 
     /// <summary>
-    /// Login user
+    /// Log in a user and return JWT and Refresh token.
     /// </summary>
-    /// <param name="loginRequest">JSON with authorization data fields.</param>
-    /// <returns>JWT token and Refresh token.</returns>
-    /// <response code="200">Successful login.</response>
-    /// <response code="400">Email or password is invalid.</response>
+    /// <param name="loginRequest">JSON object containing user email and password.</param>
+    /// <returns>Returns a LoginResponse containing JWT and Refresh token.</returns>
+    /// <response code="200">Successful login with JWT and Refresh token returned.</response>
+    /// <response code="400">Invalid email or password. Returns an error message detailing the issue.</response>
+    /// <response code="500">Internal server error. Returns an error message if there’s an issue generating tokens.</response>
     [HttpPost("login")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Login([FromBody] UserLoginRequest loginRequest)
     {
         var result = await _userManager.ValidateLoginAsync(loginRequest);
@@ -59,7 +59,7 @@ public class AuthorizationController : ControllerBase
     }
 
     /// <summary>
-    /// Initiates the Google OAuth2 login process by redirecting the user to Google’s authorization endpoint.
+    /// Initiates the Google OAuth2 login process by redirecting to Google's authorization endpoint.
     /// </summary>
     /// <returns>Redirects to Google OAuth2 authorization URL.</returns>
     /// <response code="302">Redirect to Google login page.</response>
@@ -73,7 +73,7 @@ public class AuthorizationController : ControllerBase
     }
 
     /// <summary>
-    /// Handles the Google OAuth2 callback by exchanging the authorization code for tokens and logging in the user.
+    /// Handles the Google OAuth2 callback and exchanges the authorization code for tokens.
     /// </summary>
     /// <param name="code">The authorization code received from Google.</param>
     /// <returns>JWT token and Refresh token.</returns>
@@ -82,6 +82,7 @@ public class AuthorizationController : ControllerBase
     /// <response code="500">Error creating or updating user or generating tokens.</response>
     [AllowAnonymous]
     [HttpGet("google-callback")]
+    [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GoogleCallback(string code)
     {
         var tokenResponse = await _googleManager.ExchangeCodeForTokenAsync(code);
@@ -103,19 +104,25 @@ public class AuthorizationController : ControllerBase
     }
 
     /// <summary>
-    /// Get new JWT access tokens and Refresh Tokens using the refresh token.
+    /// Refreshes JWT access and Refresh tokens using the provided refresh token.
     /// </summary>
-    /// <param name="refreshTokenRequest">JSON with data fields to update the access token.</param>
+    /// <param name="refreshTokenRequest">JSON object with data fields to update the access token.</param>
     /// <returns>JWT Access token and Refresh token.</returns>
     /// <response code="200">Successful refresh.</response>
-    /// <response code="400">Invalid input data.</response>
+    /// <response code="400">Invalid input data or token validation failed.</response>
+    /// <response code="403">Authorization failed due to an invalid or missing role in the provided token.</response>
     [HttpPost("refresh")]
+    [Authorize]
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest refreshTokenRequest)
     {
+        var userId = HttpContext.User.Claims.GetUserId();
+        if (!userId.HasValue)
+            return await StatusCodes.Status403Forbidden
+                .ResultState("Authorization failed due to an invalid or missing role in the provided token");
+        
         var result = await _refreshTokenManager
-            .ValidationRefreshTokenAsync(refreshTokenRequest.UserId, refreshTokenRequest.RefreshToken);
+            .ValidationRefreshTokenAsync(userId.Value, refreshTokenRequest.RefreshToken);
 
         if (!result.Success)
             return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
@@ -127,17 +134,24 @@ public class AuthorizationController : ControllerBase
     }
 
     /// <summary>
-    /// Logout user
+    /// Logs out the user and invalidates the current session tokens.
     /// </summary>
-    /// <param name="logoutRequest">JSON with logout data fields.</param>
-    /// <returns>Exit status.</returns>
+    /// <param name="logoutRequest">JSON object containing logout data fields.</param>
+    /// <returns>Status of the logout operation.</returns>
     /// <response code="200">Successful logout.</response>
     /// <response code="400">Error in tokens or user deleted.</response>
+    /// <response code="403">Authorization failed due to an invalid or missing role in the provided token.</response>
     [HttpPost("logout")]
-    [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> Logout([FromBody] LogoutRequest logoutRequest)
     {
-        var errorMessage = await _authenticationManager.LogoutAsync(logoutRequest.UserId, logoutRequest.RefreshToken);
+        var userId = HttpContext.User.Claims.GetUserId();
+        if (!userId.HasValue)
+            return await StatusCodes.Status403Forbidden
+                .ResultState("Authorization failed due to an invalid or missing role in the provided token");
+        
+        var errorMessage = await _authenticationManager.LogoutAsync(userId.Value, logoutRequest.RefreshToken);
         return string.IsNullOrEmpty(errorMessage)
             ? await StatusCodes.Status200OK.ResultState()
             : await StatusCodes.Status400BadRequest.ResultState(errorMessage);

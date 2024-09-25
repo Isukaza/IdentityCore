@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Helpers;
 using IdentityCore.Configuration;
 using IdentityCore.DAL.PostgreSQL.Models.cache;
@@ -6,6 +7,7 @@ using IdentityCore.DAL.PostgreSQL.Models.db;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.cache;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.db;
+using IdentityCore.DAL.PostgreSQL.Roles;
 using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models;
 using IdentityCore.Models.Request;
@@ -95,6 +97,7 @@ public class UserManager : IUserManager
             Email = userData.Email,
             Password = null,
             Salt = null,
+            Role = UserRole.User,
             Provider = provider
         };
 
@@ -135,6 +138,39 @@ public class UserManager : IUserManager
         var isEmailMapping = _userCacheRepo.AddMappingToCache(RedisPrefixes.User.Email, user.Email, ttl);
 
         return isUserAdded && isUsernameMapping && isEmailMapping;
+    }
+
+    public async Task<bool> UpdateUser(User user, SuUserUpdateRequest updateData)
+    {
+        if (user is null || updateData is null || !IsAnyFieldProvided(updateData))
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(updateData.Username))
+        {
+            if (await UserExistsByUsernameAsync(updateData.Username))
+                return false;
+
+            user.Username = updateData.Username;
+        }
+
+        if (!string.IsNullOrWhiteSpace(updateData.Email))
+        {
+            if (await UserExistsByEmailAsync(updateData.Email))
+                return false;
+
+            user.Email = updateData.Email;
+        }
+
+        if (updateData.Role.HasValue)
+            user.Role = updateData.Role.Value;
+
+        if (!string.IsNullOrWhiteSpace(updateData.NewPassword))
+        {
+            user.Salt = UserHelper.GenerateSalt();
+            user.Password = UserHelper.GetPasswordHash(updateData.NewPassword, user.Salt);
+        }
+
+        return await _userDbRepo.UpdateAsync(user);
     }
 
     private async Task<bool> UpdateUserProviderAsync(User user, Provider provider)
@@ -315,6 +351,51 @@ public class UserManager : IUserManager
         await _userCacheRepo.UserExistsByEmailAsync(email)
         || await _userDbRepo.GetUserByEmailAsync(email) is not null;
 
+    public async Task<bool> UserExistsByIdAsync(Guid id) =>
+        await _userDbRepo.GetUserByIdAsync(id) is not null;
+
+    public string ValidateUserIdentity(List<Claim> claims,
+        Guid userId,
+        UserRole? compareRole = null,
+        Func<UserRole, UserRole, bool> comparison = null)
+    {
+        var userIdFromClaim = claims.GetUserId();
+        var role = claims.GetUserRole();
+        if (role is null || userIdFromClaim is null)
+            return "Authorization failed due to an invalid or missing role in the provided token";
+
+        if (comparison == null)
+        {
+            if (userIdFromClaim.Value != userId)
+                return "You do not have permission to access other users' data";
+        }
+        else
+        {
+            if (compareRole == null)
+                throw new ArgumentNullException(nameof(compareRole),
+                    "compareRole cannot be null when comparison is provided.");
+
+            if (userIdFromClaim.Value != userId && !comparison(role.Value, compareRole.Value))
+                return "You do not have permission to access other users' data";
+        }
+
+        return string.Empty;
+    }
+
+    public async Task<OperationResult<User>> ValidateUserUpdateAsync(SuUserUpdateRequest updateData)
+    {
+        if (!string.IsNullOrWhiteSpace(updateData.Email) && await UserExistsByEmailAsync(updateData.Email))
+            return new OperationResult<User>("Email is already taken");
+
+        if (!string.IsNullOrWhiteSpace(updateData.Username) && await UserExistsByUsernameAsync(updateData.Username))
+            return new OperationResult<User>("A user with this username exists");
+
+        var user = await _userDbRepo.GetUserByIdAsync(updateData.Id);
+        return user is null
+            ? new OperationResult<User>("Invalid input data")
+            : new OperationResult<User>(user);
+    }
+
     public async Task<OperationResult<User>> ValidateUserUpdateAsync(UserUpdateRequest updateData)
     {
         if (!IsSingleFieldProvided(updateData))
@@ -379,8 +460,21 @@ public class UserManager : IUserManager
         if (!string.IsNullOrWhiteSpace(updateRequest.Username)) filledFieldsCount++;
         if (!string.IsNullOrWhiteSpace(updateRequest.Email)) filledFieldsCount++;
         if (!string.IsNullOrWhiteSpace(updateRequest.OldPassword)) filledFieldsCount++;
+        if (updateRequest.Role != null) filledFieldsCount++;
 
         return filledFieldsCount == 1;
+    }
+
+    private static bool IsAnyFieldProvided(SuUserUpdateRequest updateRequest)
+    {
+        var filledFieldsCount = 0;
+
+        if (!string.IsNullOrWhiteSpace(updateRequest.Username)) filledFieldsCount++;
+        if (!string.IsNullOrWhiteSpace(updateRequest.Email)) filledFieldsCount++;
+        if (!string.IsNullOrWhiteSpace(updateRequest.NewPassword)) filledFieldsCount++;
+        if (updateRequest.Role != null) filledFieldsCount++;
+
+        return filledFieldsCount > 0;
     }
 
     private async Task<bool> UserExistsByUsernameAsync(string username) =>

@@ -7,6 +7,7 @@ using IdentityCore.Configuration;
 using IdentityCore.DAL.PostgreSQL.Models.cache;
 using IdentityCore.DAL.PostgreSQL.Models.cache.cachePrefix;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
+using IdentityCore.DAL.PostgreSQL.Roles;
 using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models;
 using IdentityCore.Models.Request;
@@ -39,19 +40,28 @@ public class UserController : Controller
     /// <summary>
     /// Retrieves user information by user ID.
     /// </summary>
-    /// <param name="useId">The unique identifier of the user.</param>
+    /// <param name="userId">The unique identifier of the user.</param>
     /// <returns>Returns the user information if found.</returns>
     /// <response code="200">User information retrieved successfully.</response>
     /// <response code="401">Unauthorized. The user is not authenticated.</response>
+    /// <response code="403">Forbidden. User does not have permission to access the requested information.</response>
     /// <response code="404">User with the specified ID not found.</response>
-    [HttpGet("{useId:guid}")]
+    [HttpGet("{userId:guid}")]
     [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetUser(Guid useId)
+    public async Task<IActionResult> GetUser(Guid userId)
     {
-        var user = await _userManager.GetUserByIdAsync(useId);
+        var error = _userManager.ValidateUserIdentity(
+            HttpContext.User.Claims.ToList(),
+            userId,
+            UserRole.Admin,
+            (userRole, compareRole) => userRole >= compareRole);
+        if (!string.IsNullOrEmpty(error))
+            return await StatusCodes.Status403Forbidden.ResultState(error);
+
+        var user = await _userManager.GetUserByIdAsync(userId);
         return user != null
             ? await StatusCodes.Status200OK.ResultState("User info", user.ToUserResponse())
-            : await StatusCodes.Status404NotFound.ResultState($"User by id:{useId} not found");
+            : await StatusCodes.Status404NotFound.ResultState($"User by id:{userId} not found");
     }
 
     /// <summary>
@@ -104,15 +114,72 @@ public class UserController : Controller
     /// </summary>
     /// <param name="updateRequest">The new details of the user.</param>
     /// <returns>Returns the status of the update.</returns>
-    /// <response code="200">User updated successfully, awaiting email confirmation.</response>
+    /// <response code="200">User updated successfully.</response>
     /// <response code="400">The update data provided is invalid.</response>
     /// <response code="401">Unauthorized. The user is not authenticated.</response>
-    /// <response code="429">A user update is already in progress.</response>
-    /// <response code="500">An error occurred during the user update.</response>
+    /// <response code="403">Forbidden. The user does not have permission to perform this action.</response>
+    /// <response code="404">User with the specified ID not found.</response>
+    /// <response code="500">An error occurred during the user update process.</response>
     [HttpPut("update")]
-    [ProducesResponseType(typeof(ReSendCfmTokenResponse), StatusCodes.Status200OK)]
-    public async Task<IActionResult> UpdateUser([FromBody] UserUpdateRequest updateRequest)
+    [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)}, {nameof(UserRole.Admin)}")]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
+    public async Task<IActionResult> UserUpdate([FromBody] SuUserUpdateRequest updateRequest)
     {
+        var userIdFromClaim = HttpContext.User.Claims.GetUserId();
+        var role = HttpContext.User.Claims.GetUserRole();
+        if (role is null || userIdFromClaim is null)
+            return await StatusCodes.Status403Forbidden
+                .ResultState("Authorization failed due to an invalid or missing role in the provided token");
+
+        var tokenType = _ctManager.DetermineTokenType(updateRequest);
+        if (tokenType is TokenType.Unknown)
+            return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
+
+        if (role == UserRole.Admin && tokenType != TokenType.RoleChange)
+            return await StatusCodes.Status403Forbidden.ResultState("Admin can only change roles");
+
+        if (role == UserRole.Admin && (updateRequest.Role != UserRole.Manager || updateRequest.Role != UserRole.User))
+            return await StatusCodes.Status403Forbidden.ResultState("Admin can't assign higher than manager");
+
+        if (!await _userManager.UserExistsByIdAsync(updateRequest.Id))
+            return await StatusCodes.Status404NotFound.ResultState("User not found");
+
+        var result = await _userManager.ValidateUserUpdateAsync(updateRequest);
+        if (!result.Success)
+            return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
+
+        if (result.Data.Role == UserRole.SuperAdmin && role == UserRole.Admin)
+            return await StatusCodes.Status403Forbidden.ResultState("You don't have access to SU update");
+
+        if (result.Data.Role == UserRole.SuperAdmin
+            && role == UserRole.SuperAdmin
+            && userIdFromClaim != updateRequest.Id)
+            return await StatusCodes.Status403Forbidden.ResultState("Cannot update other SU");
+
+        return await _userManager.UpdateUser(result.Data, updateRequest)
+            ? await StatusCodes.Status200OK.ResultState("Operation was successfully completed")
+            : await StatusCodes.Status500InternalServerError.ResultState("Error updating user");
+    }
+
+    /// <summary>
+    /// Initiates a request to update the data of an existing user, and sends a request for email confirmation.
+    /// </summary>
+    /// <param name="updateRequest">The new details of the user.</param>
+    /// <returns>Returns the status of the update.</returns>
+    /// <response code="200">User updated successfully, awaiting email confirmation.</response>
+    /// <response code="400">The update data provided is invalid or does not meet validation criteria.</response>
+    /// <response code="401">Unauthorized. The user is not authenticated.</response>
+    /// <response code="403">Forbidden. The user does not have permission to access or update the requested data.</response>
+    /// <response code="429">A user update is already in progress. Please complete the current update process.</response>
+    /// <response code="500">An error occurred during the user update process, or the email could not be sent.</response>
+    [HttpPut("request-update")]
+    [ProducesResponseType(typeof(ReSendCfmTokenResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> RequestUserUpdate([FromBody] UserUpdateRequest updateRequest)
+    {
+        var error = _userManager.ValidateUserIdentity(HttpContext.User.Claims.ToList(), updateRequest.Id);
+        if (!string.IsNullOrEmpty(error))
+            return await StatusCodes.Status403Forbidden.ResultState(error);
+
         if (await _userManager.IsUserUpdateInProgressAsync(updateRequest.Id))
             return await StatusCodes.Status429TooManyRequests.ResultState("Complete the current update process");
 
@@ -121,7 +188,7 @@ public class UserController : Controller
             return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
 
         var tokenType = _ctManager.DetermineTokenType(updateRequest);
-        if (tokenType is TokenType.Unknown)
+        if (tokenType is TokenType.Unknown || tokenType is TokenType.RoleChange)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
 
         var redisUserUpdateData = updateRequest.ToRedisUserUpdate();
@@ -142,7 +209,7 @@ public class UserController : Controller
         };
         return string.IsNullOrEmpty(sendMailError)
             ? await StatusCodes.Status200OK.ResultState("Awaiting confirmation by mail", cfmTokenResponse)
-            : await StatusCodes.Status500InternalServerError.ResultState("Not send mail");
+            : await StatusCodes.Status500InternalServerError.ResultState("Failed to send mail");
     }
 
     /// <summary>
@@ -151,21 +218,26 @@ public class UserController : Controller
     /// <remarks>
     /// This method should be called only after the old email address has been confirmed during the email change process.
     /// </remarks>
-    /// <param name="userId">The unique identifier of the user.</param>
     /// <returns>Returns the status of the email confirmation process.</returns>
     /// <response code="200">Confirmation email sent successfully.</response>
     /// <response code="400">The provided token or user data is invalid.</response>
     /// <response code="401">Unauthorized. The user is not authenticated.</response>
+    /// <response code="403">Forbidden. The user does not have permission to access the requested information.</response>
     /// <response code="500">An error occurred during the email confirmation process.</response>
     [HttpGet("send-new-email-confirmation")]
     [ProducesResponseType(typeof(ReSendCfmTokenResponse), StatusCodes.Status200OK)]
-    public async Task<IActionResult> SendNewEmailConfirmation([Required] Guid userId)
+    public async Task<IActionResult> SendNewEmailConfirmation()
     {
-        var tokenDb = await _ctManager.GetTokenByUserIdAsync(userId, TokenType.EmailChangeNew);
-        if (tokenDb is null || tokenDb.UserId != userId)
+        var userId = HttpContext.User.Claims.GetUserId();
+        if (!userId.HasValue)
+            return await StatusCodes.Status403Forbidden
+                .ResultState("Authorization failed due to an invalid or missing role in the provided token");
+
+        var tokenDb = await _ctManager.GetTokenByUserIdAsync(userId.Value, TokenType.EmailChangeNew);
+        if (tokenDb is null || tokenDb.UserId != userId.Value)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
 
-        var user = await _userManager.GetUserByIdAsync(userId);
+        var user = await _userManager.GetUserByIdAsync(userId.Value);
         if (user is null)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid token");
 
@@ -195,17 +267,29 @@ public class UserController : Controller
     /// <returns>Returns the status of the deletion.</returns>
     /// <response code="200">User deleted successfully.</response>
     /// <response code="401">Unauthorized. The user is not authenticated.</response>
+    /// <response code="403">Forbidden. User does not have permission to delete the requested user.</response>
     /// <response code="404">The user with the specified ID was not found.</response>
     /// <response code="500">An error occurred during the user deletion.</response>
     [HttpDelete("delete")]
     [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
-    public async Task<IActionResult> DeleteUser(Guid userId)
+    public async Task<IActionResult> DeleteUser([Required] Guid userId)
     {
-        var user = await _userManager.GetUserByIdAsync(userId);
-        if (user is null)
+        var error = _userManager.ValidateUserIdentity(
+            HttpContext.User.Claims.ToList(),
+            userId,
+            UserRole.SuperAdmin,
+            (userRole, compareRole) => userRole == compareRole);
+        if (!string.IsNullOrEmpty(error))
+            return await StatusCodes.Status403Forbidden.ResultState(error);
+
+        var userToDeleted = await _userManager.GetUserByIdAsync(userId);
+        if (userToDeleted is null)
             return await StatusCodes.Status404NotFound.ResultState("User not found");
 
-        return await _userManager.DeleteUserAsync(user)
+        if (userToDeleted.Role == UserRole.SuperAdmin)
+            return await StatusCodes.Status403Forbidden.ResultState("SU cannot be deleted");
+
+        return await _userManager.DeleteUserAsync(userToDeleted)
             ? await StatusCodes.Status200OK.ResultState("User deleted")
             : await StatusCodes.Status500InternalServerError.ResultState("Error when deleting user");
     }
@@ -224,6 +308,7 @@ public class UserController : Controller
     /// <response code="500">An error occurred during token confirmation.</response>
     [AllowAnonymous]
     [HttpGet("cfm-reg-token")]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
     public async Task<IActionResult> ConfirmationRegToken([FromQuery] CfmTokenRequest tokenRequest)
     {
         return await HandleTokenConfirmation(tokenRequest, true);
@@ -239,6 +324,7 @@ public class UserController : Controller
     /// <response code="401">Unauthorized. The user is not authenticated.</response>
     /// <response code="500">An error occurred during token confirmation.</response>
     [HttpGet("cfm-token")]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
     public async Task<IActionResult> ConfirmationToken([FromQuery] CfmTokenRequest tokenRequest)
     {
         return await HandleTokenConfirmation(tokenRequest, false);
@@ -254,6 +340,7 @@ public class UserController : Controller
     /// <response code="500">An error occurred during the token resend process.</response>
     [AllowAnonymous]
     [HttpPost("resend-cfm-reg-token")]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
     public async Task<IActionResult> ResendCfmRegToken(ReSendCfmTokenRequest tokenRequest)
     {
         return await HandleTokenResend(tokenRequest, true);
@@ -267,10 +354,16 @@ public class UserController : Controller
     /// <response code="200">Token resent successfully.</response>
     /// <response code="400">The provided token or user data is invalid.</response>
     /// <response code="401">Unauthorized. The user is not authenticated.</response>
+    /// <response code="403">Forbidden. The user does not have permission to access this resource.</response>
     /// <response code="500">An error occurred during the token resend process.</response>
     [HttpPost("resend-cfm-token")]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
     public async Task<IActionResult> ResendCfmToken(ReSendCfmTokenRequest tokenRequest)
     {
+        var error = _userManager.ValidateUserIdentity(HttpContext.User.Claims.ToList(), tokenRequest.UserId);
+        if (!string.IsNullOrEmpty(error))
+            return await StatusCodes.Status403Forbidden.ResultState(error);
+
         return await HandleTokenResend(tokenRequest, false);
     }
 
@@ -368,7 +461,17 @@ public class UserController : Controller
 
 #if DEBUG
 
+    /// <summary>
+    /// Generates a salt string of the specified size.
+    /// </summary>
+    /// <param name="size">The size of the salt in characters (must be between 16 and 64).</param>
+    /// <returns>Returns the generated salt string.</returns>
+    /// <response code="200">Salt generated successfully.</response>
+    /// <response code="400">Bad request. The salt size is not within the valid range (16-64).</response>
+    /// <response code="401">Unauthorized. The user is not authenticated.</response>
+    /// <response code="403">Forbidden. The user does not have permission to generate the salt.</response>
     [HttpGet("salt/{size:int}")]
+    [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)}, {nameof(UserRole.Admin)}")]
     [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
     public async Task<IActionResult> GenSalt(int size)
     {
@@ -377,11 +480,20 @@ public class UserController : Controller
                 .ResultState("The salt size must be greater than 16 and less than 64 characters");
 
         var salt = UserHelper.GenerateSalt(size);
-
         return await StatusCodes.Status200OK.ResultState("Salt", salt);
     }
 
+    /// <summary>
+    /// Generates a random password of the specified size.
+    /// </summary>
+    /// <param name="size">The size of the password in characters (must be between 12 and 64).</param>
+    /// <returns>Returns the generated password string.</returns>
+    /// <response code="200">Password generated successfully.</response>
+    /// <response code="400">Bad request. The password size is not within the valid range (12-64).</response>
+    /// <response code="401">Unauthorized. The user is not authenticated.</response>
+    /// <response code="403">Forbidden. The user does not have permission to generate a password.</response>
     [HttpGet("password/{size:int}")]
+    [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)}, {nameof(UserRole.Admin)}")]
     [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
     public async Task<IActionResult> GenPassword(int size)
     {
@@ -390,11 +502,21 @@ public class UserController : Controller
                 .ResultState("The password size must be greater than 12 and less than 64 characters");
 
         var pass = UserHelper.GeneratePassword(size);
-
         return await StatusCodes.Status200OK.ResultState("Password", pass);
     }
 
+    /// <summary>
+    /// Generates a hash for the provided password using the provided salt.
+    /// </summary>
+    /// <param name="password">The password string to be hashed (must be between 12 and 64 characters).</param>
+    /// <param name="salt">The salt string to be used in hashing (must be between 16 and 64 characters).</param>
+    /// <returns>Returns the hashed password string.</returns>
+    /// <response code="200">Password hash generated successfully.</response>
+    /// <response code="400">Bad request. Either the password or salt size is not within the valid range.</response>
+    /// <response code="401">Unauthorized. The user is not authenticated.</response>
+    /// <response code="403">Forbidden. The user does not have permission to generate a password hash.</response>
     [HttpGet("password-hash")]
+    [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)}, {nameof(UserRole.Admin)}")]
     [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPasswordHash(string password, string salt)
     {
@@ -402,12 +524,11 @@ public class UserController : Controller
             return await StatusCodes.Status400BadRequest
                 .ResultState("The password size must be greater than 12 and less than 64 characters");
 
-        if (salt.Length < 12 || salt.Length > 64)
+        if (salt.Length < 16 || salt.Length > 64)
             return await StatusCodes.Status400BadRequest
                 .ResultState("The salt size must be greater than 16 and less than 64 characters");
 
         var passwordHash = UserHelper.GetPasswordHash(password, salt);
-
         return await StatusCodes.Status200OK.ResultState("Password hash", passwordHash);
     }
 

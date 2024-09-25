@@ -1,7 +1,9 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 using Helpers;
+using IdentityCore.DAL.PostgreSQL.Roles;
 using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models.Request;
 
@@ -9,6 +11,7 @@ namespace IdentityCore.Controllers;
 
 [ApiController]
 [Route("/[controller]")]
+[Authorize(Roles = nameof(UserRole.SuperAdmin))]
 public class EmailController : Controller
 {
     #region C-tor and fields
@@ -36,7 +39,7 @@ public class EmailController : Controller
         var result = await _mailManager.CreateTemplate(request.TemplateName, request.Subject, request.HtmlContent);
         return string.IsNullOrEmpty(result)
             ? await StatusCodes.Status200OK.ResultState("Operation was successfully completed")
-            : await StatusCodes.Status500InternalServerError.ResultState();
+            : await StatusCodes.Status500InternalServerError.ResultState(result);
     }
 
     /// <summary>
@@ -53,6 +56,6 @@ public class EmailController : Controller
         var result = await _mailManager.DeleteTemplate(templateName);
         return string.IsNullOrEmpty(result)
             ? await StatusCodes.Status200OK.ResultState("Operation was successfully completed")
-            : await StatusCodes.Status500InternalServerError.ResultState();
+            : await StatusCodes.Status500InternalServerError.ResultState(result);
     }
 }

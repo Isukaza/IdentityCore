@@ -2,5 +2,4 @@ using IdentityCore.Models.Base;
 
 namespace IdentityCore.Models.Response;
 
-public record ReSendCfmTokenResponse : ReSendCfmTokenBase
-{ }
+public record ReSendCfmTokenResponse : ReSendCfmTokenBase;

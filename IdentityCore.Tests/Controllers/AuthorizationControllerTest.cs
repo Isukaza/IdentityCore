@@ -41,7 +41,7 @@ public class AuthorizationControllerTest
     {
         var mockConfiguration = Mocks.MockFactory.GetMockConfiguration();
         ConfigBase.SetConfiguration(mockConfiguration);
-        
+
         _httpContextMock = Mocks.MockFactory.GetHttpContextMock();
         _dbContext = _httpContextMock.Object.RequestServices.GetService<IdentityCoreDbContext>();
         _controller = Mocks.MockFactory.GetController<AuthorizationController>(_httpContextMock.Object);
@@ -107,7 +107,7 @@ public class AuthorizationControllerTest
         Assert.That(response, Is.Not.Null);
         Assert.That(response.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
     }
-    
+
     [Test]
     public async Task LoginSSO_NewUser_ReturnsOK()
     {
@@ -126,12 +126,13 @@ public class AuthorizationControllerTest
         var user = _users[_random.Next(_users.Count)];
         Assert.That(0, Is.Not.EqualTo(user.RefreshTokens.Count));
 
+        Mocks.MockFactory.MoqUserClaims(_httpContextMock, user);
+
         var refreshToken = user.RefreshTokens.FirstOrDefault();
         Assert.That(refreshToken, Is.Not.Null);
 
         var refreshTokenRequest = new RefreshTokenRequest
         {
-            UserId = refreshToken.UserId,
             RefreshToken = refreshToken.RefToken
         };
 
@@ -150,12 +151,13 @@ public class AuthorizationControllerTest
         var user = _users[_random.Next(_users.Count)];
         Assert.That(0, Is.Not.EqualTo(user.RefreshTokens.Count));
 
+        Mocks.MockFactory.MoqUserClaims(_httpContextMock, user);
+
         var refreshToken = user.RefreshTokens.FirstOrDefault();
         Assert.That(refreshToken, Is.Not.Null);
 
         var refreshTokenRequest = new RefreshTokenRequest
         {
-            UserId = refreshToken.UserId,
             RefreshToken = "InvalidRefreshToken"
         };
 
@@ -174,12 +176,13 @@ public class AuthorizationControllerTest
         var user = _users[_random.Next(_users.Count)];
         Assert.That(0, Is.Not.EqualTo(user.RefreshTokens.Count));
 
+        Mocks.MockFactory.MoqUserClaims(_httpContextMock, user);
+
         var refreshToken = user.RefreshTokens.FirstOrDefault();
         Assert.That(refreshToken, Is.Not.Null);
 
         var logoutData = new LogoutRequest
         {
-            UserId = refreshToken.UserId,
             RefreshToken = refreshToken.RefToken
         };
 
@@ -198,12 +201,13 @@ public class AuthorizationControllerTest
         var user = _users[_random.Next(_users.Count)];
         Assert.That(0, Is.Not.EqualTo(user.RefreshTokens.Count));
 
+        Mocks.MockFactory.MoqUserClaims(_httpContextMock, user);
+
         var refreshToken = user.RefreshTokens.FirstOrDefault();
         Assert.That(refreshToken, Is.Not.Null);
 
         var logoutData = new LogoutRequest
         {
-            UserId = refreshToken.UserId,
             RefreshToken = refreshToken.RefToken
         };
 

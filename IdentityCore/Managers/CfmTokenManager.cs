@@ -4,7 +4,7 @@ using IdentityCore.DAL.PostgreSQL.Models.cache;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.cache;
 using IdentityCore.Managers.Interfaces;
-using IdentityCore.Models.Request;
+using IdentityCore.Models.Interface;
 
 namespace IdentityCore.Managers;
 
@@ -104,7 +104,7 @@ public class CfmTokenManager : ICfmTokenManager
         return AddToken(token, ttl) ? token : null;
     }
 
-    public TokenType DetermineTokenType(UserUpdateRequest updateRequest)
+    public TokenType DetermineTokenType(IUserUpdate updateRequest)
     {
         if (updateRequest == null)
             return TokenType.Unknown;
@@ -114,6 +114,9 @@ public class CfmTokenManager : ICfmTokenManager
 
         if (!string.IsNullOrWhiteSpace(updateRequest.NewPassword))
             return TokenType.PasswordChange;
+
+        if (updateRequest.Role != null)
+            return TokenType.RoleChange;
 
         return !string.IsNullOrWhiteSpace(updateRequest.Email)
             ? TokenType.EmailChangeOld

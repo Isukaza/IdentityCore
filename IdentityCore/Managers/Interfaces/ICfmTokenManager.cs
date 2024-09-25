@@ -1,6 +1,6 @@
 using IdentityCore.DAL.PostgreSQL.Models.cache;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
-using IdentityCore.Models.Request;
+using IdentityCore.Models.Interface;
 
 namespace IdentityCore.Managers.Interfaces;
 
@@ -16,6 +16,6 @@ public interface ICfmTokenManager
 
     Task<bool> DeleteTokenAsync(RedisConfirmationToken token);
 
-    TokenType DetermineTokenType(UserUpdateRequest updateRequest);
+    TokenType DetermineTokenType(IUserUpdate updateRequest);
     bool ValidateTokenTypeForRequest(TokenType tokenType, bool isRegistrationProcess);
 }

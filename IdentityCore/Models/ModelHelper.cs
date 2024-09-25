@@ -16,6 +16,7 @@ public static class ModelHelper
             Id = user.Id,
             Username = user.Username,
             Email = user.Email,
+            Role = user.Role,
             Provider = user.Provider
         };
 

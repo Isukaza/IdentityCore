@@ -2,12 +2,17 @@ using System;
 using System.Collections.Generic;
 using IdentityCore.DAL.PostgreSQL.Models.db;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
+using IdentityCore.DAL.PostgreSQL.Roles;
 
 namespace IdentityCore.Tests.Helpers;
 
 public static class TestDbEntityBuilder
 {
-    public static List<User> GenerateUsers(string password, int userCount = 1, int tokensPerUser = 0, int tokenDurationDays = 1)
+    public static List<User> GenerateUsers(
+        string password,
+        int userCount = 1,
+        int tokensPerUser = 0,
+        int tokenDurationDays = 1)
     {
         var users = new List<User>();
         for (var i = 0; i < userCount; i++)
@@ -20,6 +25,7 @@ public static class TestDbEntityBuilder
                 Email = $"{username}@example.com",
                 Password = TestDataHelper.GetPasswordHash(password, salt),
                 Salt = salt,
+                Role = UserRole.SuperAdmin,
                 Provider = Provider.Local,
                 IsActive = true
             };

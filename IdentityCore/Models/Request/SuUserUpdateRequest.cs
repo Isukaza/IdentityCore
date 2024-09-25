@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Helpers.ValidationAttributes;
 using IdentityCore.Configuration.Constants;
 using IdentityCore.DAL.PostgreSQL.Roles;
@@ -5,9 +6,7 @@ using IdentityCore.Models.Interface;
 
 namespace IdentityCore.Models.Request;
 
-using System.ComponentModel.DataAnnotations;
-
-public class UserUpdateRequest : IUserUpdate
+public class SuUserUpdateRequest : IUserUpdate
 {
     [Required(ErrorMessage = "ID is required")]
     [NotEmptyGuid("Incorrect ID")]
@@ -26,17 +25,7 @@ public class UserUpdateRequest : IUserUpdate
         ValidationConstants.PassMaxLength,
         ErrorMessage = ValidationConstants.PassErrorMessage,
         MinimumLength = ValidationConstants.PassMinLength)]
-    [RegularExpression(ValidationConstants.PassRegex, ErrorMessage = ValidationConstants.PassFormatErrorMessage)]
-    [BothOrNone("NewPassword", "Both OldPassword and NewPassword must be provided if one of them is set.")]
-    public string OldPassword { get; init; }
-
-    [DataType(DataType.Password)]
-    [StringLength(
-        ValidationConstants.PassMaxLength,
-        ErrorMessage = ValidationConstants.PassErrorMessage,
-        MinimumLength = ValidationConstants.PassMinLength)]
-    [RegularExpression(ValidationConstants.PassRegex, ErrorMessage = ValidationConstants.PassFormatErrorMessage)]
-    [BothOrNone("OldPassword", "Both OldPassword and NewPassword must be provided if one of them is set.")]
+    //[RegularExpression(ValidationConstants.PassRegex, ErrorMessage = ValidationConstants.PassFormatErrorMessage)]
     public string NewPassword { get; init; }
 
     [DataType(DataType.Password)]
@@ -44,7 +33,7 @@ public class UserUpdateRequest : IUserUpdate
         ValidationConstants.PassMaxLength,
         ErrorMessage = ValidationConstants.PassErrorMessage,
         MinimumLength = ValidationConstants.PassMinLength)]
-    [RegularExpression(ValidationConstants.PassRegex, ErrorMessage = ValidationConstants.PassFormatErrorMessage)]
+    //[RegularExpression(ValidationConstants.PassRegex, ErrorMessage = ValidationConstants.PassFormatErrorMessage)]
     [Compare("NewPassword", ErrorMessage = ValidationConstants.PassMismatchErrorMessage)]
     public string ConfirmNewPassword { get; init; }
 }

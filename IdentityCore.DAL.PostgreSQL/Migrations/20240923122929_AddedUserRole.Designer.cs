@@ -3,6 +3,7 @@ using System;
 using IdentityCore.DAL.PostgreSQL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IdentityCore.DAL.PostgreSQL.Migrations
 {
     [DbContext(typeof(IdentityCoreDbContext))]
-    partial class IdentityCoreDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240923122929_AddedUserRole")]
+    partial class AddedUserRole
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using IdentityCore.DAL.PostgreSQL.Models.db.Base;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
+using IdentityCore.DAL.PostgreSQL.Roles;
 
 namespace IdentityCore.DAL.PostgreSQL.Models.db;
 
@@ -20,15 +21,18 @@ public record User : BaseDbEntity
     public required string? Password { get; set; }
 
     public required string? Salt { get; set; }
-    
+
+    [Required(ErrorMessage = "Role is required")]
+    public required UserRole Role { get; set; }
+
     [Required(ErrorMessage = "Provider is required")]
     public Provider Provider { get; set; }
 
     public bool IsActive { get; set; }
-    
+
     #region Relational
 
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new HashSet<RefreshToken>();
-    
+
     #endregion
 }

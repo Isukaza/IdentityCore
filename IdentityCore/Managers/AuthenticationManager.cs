@@ -43,7 +43,7 @@ public class AuthenticationManager : IAuthenticationManager
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new(ClaimTypes.Role, "Admin")
+            new(ClaimTypes.Role, user.Role.ToString())
         };
 
         var jwt = new JwtSecurityToken(

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using IdentityCore.Configuration.Constants;
 
 namespace IdentityCore.Models.Request;
 
@@ -9,7 +10,11 @@ public class UserLoginRequest
     public required string Email { get; init; }
 
     [Required(ErrorMessage = "Password is required")]
-    [StringLength(255, ErrorMessage = "Must be between 12 and 255 characters", MinimumLength = 12)]
     [DataType(DataType.Password)]
+    [StringLength(
+        ValidationConstants.PassMaxLength,
+        ErrorMessage = ValidationConstants.PassErrorMessage,
+        MinimumLength = ValidationConstants.PassMinLength)]
+    [RegularExpression(ValidationConstants.PassRegex, ErrorMessage = ValidationConstants.PassFormatErrorMessage)]
     public required string Password { get; init; }
 }

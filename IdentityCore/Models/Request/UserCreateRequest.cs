@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using IdentityCore.Configuration.Constants;
 using IdentityCore.Models.Interface;
 
 namespace IdentityCore.Models.Request;
@@ -19,13 +20,21 @@ public class UserCreateRequest : IUser
     public required string Email { get; init; }
 
     [Required(ErrorMessage = "Password is required")]
-    [StringLength(255, ErrorMessage = "The password must be between 12 and 255 characters long.", MinimumLength = 12)]
     [DataType(DataType.Password)]
+    [StringLength(
+        ValidationConstants.PassMaxLength,
+        ErrorMessage = ValidationConstants.PassErrorMessage,
+        MinimumLength = ValidationConstants.PassMinLength)]
+    [RegularExpression(ValidationConstants.PassRegex, ErrorMessage = ValidationConstants.PassFormatErrorMessage)]
     public required string Password { get; init; }
 
     [Required(ErrorMessage = "Confirm password is required")]
-    [Compare("Password", ErrorMessage = "Password and Confirmation Password must match.")]
-    [StringLength(255, ErrorMessage = "The password must be between 12 and 255 characters long.", MinimumLength = 12)]
     [DataType(DataType.Password)]
+    [StringLength(
+        ValidationConstants.PassMaxLength,
+        ErrorMessage = ValidationConstants.PassErrorMessage,
+        MinimumLength = ValidationConstants.PassMinLength)]
+    [RegularExpression(ValidationConstants.PassRegex, ErrorMessage = ValidationConstants.PassFormatErrorMessage)]
+    [Compare("Password", ErrorMessage = "Password and Confirmation Password must match.")]
     public string ConfirmPassword { get; init; }
 }
