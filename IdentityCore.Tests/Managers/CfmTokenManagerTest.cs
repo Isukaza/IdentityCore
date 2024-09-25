@@ -6,6 +6,7 @@ using IdentityCore.Configuration;
 using IdentityCore.DAL.PostgreSQL.Models.cache;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.cache;
+using IdentityCore.DAL.PostgreSQL.Roles;
 using IdentityCore.Managers;
 using IdentityCore.Models.Request;
 
@@ -760,24 +761,7 @@ public class CfmTokenManagerTests
         // Assert
         Assert.That(result, Is.EqualTo(TokenType.UsernameChange), "Expected UsernameChange token type.");
     }
-
-    [Test]
-    public void DetermineTokenType_NewPasswordIsSet_ReturnsPasswordChange()
-    {
-        // Arrange
-        var updateRequest = new UserUpdateRequest
-        {
-            Id = Guid.NewGuid(),
-            NewPassword = "NewPassword123!"
-        };
-
-        // Act
-        var result = _tokenManager.DetermineTokenType(updateRequest);
-
-        // Assert
-        Assert.That(result, Is.EqualTo(TokenType.PasswordChange), "Expected PasswordChange token type.");
-    }
-
+    
     [Test]
     public void DetermineTokenType_EmailIsSet_ReturnsEmailChangeOld()
     {
@@ -793,6 +777,40 @@ public class CfmTokenManagerTests
 
         // Assert
         Assert.That(result, Is.EqualTo(TokenType.EmailChangeOld), "Expected EmailChangeOld token type.");
+    }
+
+    [Test]
+    public void DetermineTokenType_RoleIsSet_ReturnsPasswordChange()
+    {
+        // Arrange
+        var updateRequest = new UserUpdateRequest
+        {
+            Id = Guid.NewGuid(),
+            Role = UserRole.SuperAdmin
+        };
+
+        // Act
+        var result = _tokenManager.DetermineTokenType(updateRequest);
+
+        // Assert
+        Assert.That(result, Is.EqualTo(TokenType.RoleChange), "Expected PasswordChange token type.");
+    }
+    
+    [Test]
+    public void DetermineTokenType_NewPasswordIsSet_ReturnsPasswordChange()
+    {
+        // Arrange
+        var updateRequest = new UserUpdateRequest
+        {
+            Id = Guid.NewGuid(),
+            NewPassword = "NewPassword123!"
+        };
+
+        // Act
+        var result = _tokenManager.DetermineTokenType(updateRequest);
+
+        // Assert
+        Assert.That(result, Is.EqualTo(TokenType.PasswordChange), "Expected PasswordChange token type.");
     }
 
     [Test]
