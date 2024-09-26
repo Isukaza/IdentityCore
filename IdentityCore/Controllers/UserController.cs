@@ -269,6 +269,8 @@ public class UserController : Controller
             return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
 
         var userUpd = _userManager.GeneratePasswordUpdateEntityAsync(passwordResetCfm.Password);
+        if (userUpd is null)
+            return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
 
         var executionError = await _userManager.ExecuteUserUpdateFromTokenAsync(user, userUpd, token);
         if (string.IsNullOrEmpty(executionError))
