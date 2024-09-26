@@ -25,7 +25,7 @@ public class SuUserUpdateRequest : IUserUpdate
         ValidationConstants.PassMaxLength,
         ErrorMessage = ValidationConstants.PassErrorMessage,
         MinimumLength = ValidationConstants.PassMinLength)]
-    //[RegularExpression(ValidationConstants.PassRegex, ErrorMessage = ValidationConstants.PassFormatErrorMessage)]
+    [RegularExpression(ValidationConstants.PassRegex, ErrorMessage = ValidationConstants.PassFormatErrorMessage)]
     public string NewPassword { get; init; }
 
     [DataType(DataType.Password)]
@@ -33,7 +33,7 @@ public class SuUserUpdateRequest : IUserUpdate
         ValidationConstants.PassMaxLength,
         ErrorMessage = ValidationConstants.PassErrorMessage,
         MinimumLength = ValidationConstants.PassMinLength)]
-    //[RegularExpression(ValidationConstants.PassRegex, ErrorMessage = ValidationConstants.PassFormatErrorMessage)]
+    [RegularExpression(ValidationConstants.PassRegex, ErrorMessage = ValidationConstants.PassFormatErrorMessage)]
     [Compare("NewPassword", ErrorMessage = ValidationConstants.PassMismatchErrorMessage)]
     public string ConfirmNewPassword { get; init; }
 }
