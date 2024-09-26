@@ -595,7 +595,7 @@ public class CfmTokenManagerTests
     {
         // Arrange
         var initialModified = DateTime.UtcNow - MailConfig.Values.MinIntervalBetweenAttempts;
-        
+
         var userId = Guid.NewGuid();
         var token = new RedisConfirmationToken
         {
@@ -605,7 +605,7 @@ public class CfmTokenManagerTests
             AttemptCount = 1,
             Modified = initialModified
         };
-        
+
         _mockCacheRepo.Setup(repo => repo.DeleteAsync(It.IsAny<string>(), It.IsAny<TokenType>()))
             .ReturnsAsync(true);
 
@@ -615,7 +615,7 @@ public class CfmTokenManagerTests
                 It.IsAny<TokenType>(),
                 It.IsAny<TimeSpan>()))
             .Returns(true);
-        
+
         _mockCacheRepo
             .Setup(repo => repo.Add(
                 It.IsAny<string>(),
@@ -636,7 +636,7 @@ public class CfmTokenManagerTests
         Assert.That(result.AttemptCount, Is.EqualTo(2), "AttemptCount should be incremented.");
         Assert.That(result.Modified, Is.Not.EqualTo(initialModified), "Modified date should be updated.");
     }
-    
+
     [Test]
     public async Task UpdateTokenAsync_TokenModifiedLongEnough_AttemptCountResetToOne()
     {
@@ -761,7 +761,7 @@ public class CfmTokenManagerTests
         // Assert
         Assert.That(result, Is.EqualTo(TokenType.UsernameChange), "Expected UsernameChange token type.");
     }
-    
+
     [Test]
     public void DetermineTokenType_EmailIsSet_ReturnsEmailChangeOld()
     {
@@ -795,7 +795,7 @@ public class CfmTokenManagerTests
         // Assert
         Assert.That(result, Is.EqualTo(TokenType.RoleChange), "Expected PasswordChange token type.");
     }
-    
+
     [Test]
     public void DetermineTokenType_NewPasswordIsSet_ReturnsPasswordChange()
     {
@@ -867,6 +867,7 @@ public class CfmTokenManagerTests
         {
             TokenType.EmailChangeOld,
             TokenType.EmailChangeNew,
+            TokenType.PasswordReset,
             TokenType.PasswordChange,
             TokenType.UsernameChange,
             TokenType.Unknown
@@ -920,6 +921,20 @@ public class CfmTokenManagerTests
             Assert.That(result, Is.False,
                 $"Expected false for token type {tokenType} when not in registration process.");
         }
+    }
+
+    [Test]
+    public void ValidateTokenTypeForRequest_NotRegistrationProcess_ReturnsFalseForPasswordReset()
+    {
+        // Arrange
+        const bool isRegistrationProcess = false;
+        const TokenType tokenType = TokenType.PasswordReset;
+
+        // Act
+        var result = _tokenManager.ValidateTokenTypeForRequest(tokenType, isRegistrationProcess);
+
+        // Assert
+        Assert.That(result, Is.False, "Expected false for PasswordReset token type when not in registration process.");
     }
 
     #endregion

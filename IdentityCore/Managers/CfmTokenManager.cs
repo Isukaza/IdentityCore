@@ -72,7 +72,7 @@ public class CfmTokenManager : ICfmTokenManager
     {
         if (tokenType == TokenType.Unknown)
             return null;
-        
+
         var ttl = TokenConfig.GetTtlForTokenType(tokenType);
         var token = new RedisConfirmationToken
         {
@@ -128,7 +128,9 @@ public class CfmTokenManager : ICfmTokenManager
         if (isRegistrationProcess)
             return tokenType == TokenType.RegistrationConfirmation;
 
-        return tokenType != TokenType.RegistrationConfirmation && tokenType != TokenType.Unknown;
+        return tokenType != TokenType.RegistrationConfirmation
+               && tokenType != TokenType.Unknown
+               && tokenType != TokenType.PasswordReset;
     }
 
     private bool AddToken(RedisConfirmationToken token, TimeSpan ttl)

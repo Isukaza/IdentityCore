@@ -39,6 +39,9 @@ public class UserManager : IUserManager
     public async Task<User> GetUserByIdAsync(Guid id) =>
         await _userDbRepo.GetUserByIdAsync(id);
 
+    public async Task<User> GetUserByEmailAsync(string email) =>
+        await _userDbRepo.GetUserByEmailAsync(email);
+
     public async Task<User> GetUserByTokenTypeAsync(Guid id, TokenType tokenType) =>
         tokenType == TokenType.RegistrationConfirmation
             ? await _userCacheRepo.GetUserByIdAsync<User>(RedisPrefixes.User.Registration, id)
@@ -268,12 +271,15 @@ public class UserManager : IUserManager
         RedisUserUpdate userUpdData,
         RedisConfirmationToken token)
     {
+        if (token is null)
+            return "Invalid token";
+
         return token.TokenType switch
         {
             TokenType.RegistrationConfirmation => await HandleRegistrationConfirmation(user),
             TokenType.EmailChangeOld => HandleEmailChangeOld(token),
             TokenType.EmailChangeNew => await HandleEmailChangeNew(user, userUpdData),
-            TokenType.PasswordChange => await HandlePasswordChange(user, userUpdData),
+            TokenType.PasswordChange or TokenType.PasswordReset => await HandlePasswordChange(user, userUpdData),
             TokenType.UsernameChange => await HandleUsernameChange(user, userUpdData),
             _ => "Invalid token"
         };
@@ -281,6 +287,9 @@ public class UserManager : IUserManager
 
     private async Task<string> HandleRegistrationConfirmation(User user)
     {
+        if (user is null)
+            return "Activation error";
+
         user.IsActive = true;
         return await _userDbRepo.CreateAsync(user) is not null
             ? string.Empty
@@ -308,7 +317,7 @@ public class UserManager : IUserManager
 
     private async Task<string> HandleEmailChangeNew(User user, RedisUserUpdate userUpdateData)
     {
-        if (string.IsNullOrEmpty(userUpdateData.Email))
+        if (user is null || string.IsNullOrEmpty(userUpdateData?.Email))
             return "An error occurred while changing email";
 
         user.Email = userUpdateData.Email;
@@ -319,7 +328,10 @@ public class UserManager : IUserManager
 
     private async Task<string> HandlePasswordChange(User user, RedisUserUpdate userUpdateData)
     {
-        if (string.IsNullOrEmpty(userUpdateData.Password) || string.IsNullOrEmpty(userUpdateData.Salt))
+        if (user is null
+            || userUpdateData is null
+            || string.IsNullOrEmpty(userUpdateData.Password)
+            || string.IsNullOrEmpty(userUpdateData.Salt))
             return "An error occurred while changing password";
 
         user.Password = userUpdateData.Password;
@@ -331,7 +343,7 @@ public class UserManager : IUserManager
 
     private async Task<string> HandleUsernameChange(User user, RedisUserUpdate userUpdateData)
     {
-        if (string.IsNullOrEmpty(userUpdateData.Username))
+        if (user is null || string.IsNullOrEmpty(userUpdateData?.Username))
             return "An error occurred while changing username";
 
         user.Username = userUpdateData.Username;
@@ -484,6 +496,22 @@ public class UserManager : IUserManager
     #endregion
 
     #region Common
+
+    public RedisUserUpdate GeneratePasswordUpdateEntityAsync(string newPassword)
+    {
+        if (string.IsNullOrWhiteSpace(newPassword))
+            return null;
+
+        var salt = UserHelper.GenerateSalt();
+        var hashedPassword = UserHelper.GetPasswordHash(newPassword, salt);
+
+        return new RedisUserUpdate
+        {
+            Id = default,
+            Password = hashedPassword,
+            Salt = salt
+        };
+    }
 
     private async Task<string> GenerateUniqueUsernameAsync(string username)
     {
