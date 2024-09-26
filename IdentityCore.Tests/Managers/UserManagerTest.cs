@@ -2,14 +2,18 @@ using System;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
+
 using Helpers;
 using IdentityCore.Configuration;
+using IdentityCore.DAL.PostgreSQL.Models.cache;
 using IdentityCore.DAL.PostgreSQL.Models.db;
+using IdentityCore.DAL.PostgreSQL.Models.enums;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.cache;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.db;
 using IdentityCore.DAL.PostgreSQL.Roles;
 using IdentityCore.Managers;
 using IdentityCore.Models.Request;
+
 using Moq;
 using NUnit.Framework;
 
@@ -36,7 +40,53 @@ public class UserManagerTest
         _userManager = new UserManager(_mockUserDbRepo.Object, _mockUserCacheRepo.Object, _mockCtCacheRepo.Object);
     }
 
-    #region UpdateUserTests
+    #region GetUserByEmailAsyncTest
+
+    [Test]
+    public async Task GetUserByEmailAsync_UserExists_ReturnsUser()
+    {
+        // Arrange
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Username = "existingUser",
+            Email = "user@example.com",
+            Password = null,
+            Salt = null,
+            Role = UserRole.User
+        };
+
+        _mockUserDbRepo
+            .Setup(repo => repo.GetUserByEmailAsync(user.Email))
+            .ReturnsAsync(user);
+
+        // Act
+        var result = await _userManager.GetUserByEmailAsync(user.Email);
+
+        // Assert
+        Assert.That(result, Is.EqualTo(user));
+    }
+
+    [Test]
+    public async Task GetUserByEmailAsync_UserDoesNotExist_ReturnsNull()
+    {
+        // Arrange
+        var userEmail = "user@example.com";
+
+        _mockUserDbRepo
+            .Setup(repo => repo.GetUserByEmailAsync(userEmail))
+            .ReturnsAsync((User)null);
+
+        // Act
+        var result = await _userManager.GetUserByEmailAsync(userEmail);
+
+        // Assert
+        Assert.That(result, Is.Null);
+    }
+
+    #endregion
+
+    #region UpdateUserTest
 
     [Test]
     public async Task UpdateUser_ValidUsernameAndEmail_ReturnsTrueAndUpdatesValues()
@@ -332,6 +382,401 @@ public class UserManagerTest
 
     #endregion
 
+    #region ExecuteUserUpdateFromTokenAsyncTest
+
+    [Test]
+    public async Task ExecuteUserUpdateFromTokenAsync_RegistrationConfirmation_ReturnStringEmpty()
+    {
+        // Arrange
+        var user = new User
+        {
+            IsActive = false,
+            Username = null,
+            Email = null,
+            Password = null,
+            Salt = null,
+            Role = UserRole.User
+        };
+        var token = new RedisConfirmationToken
+        {
+            TokenType = TokenType.RegistrationConfirmation,
+            Value = null
+        };
+
+        _mockUserDbRepo
+            .Setup(repo => repo.CreateAsync(It.IsAny<User>()))
+            .ReturnsAsync(user);
+
+        // Act
+        var result = await _userManager.ExecuteUserUpdateFromTokenAsync(user, null, token);
+
+        // Assert
+        Assert.That(result, Is.EqualTo(string.Empty));
+        Assert.That(user.IsActive, Is.True);
+    }
+
+    [Test]
+    public async Task ExecuteUserUpdateFromTokenAsync_EmailChangeOld_Success()
+    {
+        // Arrange
+        var token = new RedisConfirmationToken
+        {
+            TokenType = TokenType.EmailChangeOld,
+            UserId = Guid.NewGuid(),
+            Value = null
+        };
+
+        _mockCtCacheRepo
+            .Setup(repo => repo.Add(
+                It.IsAny<string>(),
+                It.IsAny<object>(),
+                It.IsAny<TokenType>(),
+                It.IsAny<TimeSpan>()))
+            .Returns(true);
+
+        // Act
+        var result = await _userManager.ExecuteUserUpdateFromTokenAsync(null, null, token);
+
+        // Assert
+        Assert.That(result, Is.EqualTo(string.Empty));
+    }
+
+    [Test]
+    public async Task ExecuteUserUpdateFromTokenAsync_EmailChangeNew_ReturnStringEmpty()
+    {
+        // Arrange
+        var user = new User
+        {
+            Email = "old@example.com",
+            Username = null,
+            Password = null,
+            Salt = null,
+            Role = UserRole.User
+        };
+
+        var updateData = new RedisUserUpdate
+        {
+            Email = "new@example.com",
+            Id = default
+        };
+
+        var token = new RedisConfirmationToken
+        {
+            TokenType = TokenType.EmailChangeNew,
+            Value = null
+        };
+
+        _mockUserDbRepo
+            .Setup(repo => repo.UpdateAsync(It.IsAny<User>()))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _userManager.ExecuteUserUpdateFromTokenAsync(user, updateData, token);
+
+        // Assert
+        Assert.That(result, Is.EqualTo(string.Empty));
+        Assert.That(user.Email, Is.EqualTo("new@example.com"));
+    }
+
+    [Test]
+    public async Task ExecuteUserUpdateFromTokenAsync_PasswordChange_ReturnStringEmpty()
+    {
+        // Arrange
+        var user = new User
+        {
+            Password = "oldPass",
+            Salt = "oldSalt",
+            Username = null,
+            Email = null,
+            Role = UserRole.User
+        };
+
+        var updateData = new RedisUserUpdate
+        {
+            Password = "newPass",
+            Salt = "newSalt",
+            Id = default
+        };
+
+        var token = new RedisConfirmationToken
+        {
+            TokenType = TokenType.PasswordChange,
+            Value = null
+        };
+
+        _mockUserDbRepo
+            .Setup(repo => repo.UpdateAsync(It.IsAny<User>()))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _userManager.ExecuteUserUpdateFromTokenAsync(user, updateData, token);
+
+        // Assert
+        Assert.That(result, Is.EqualTo(string.Empty));
+        Assert.That(user.Password, Is.EqualTo("newPass"));
+        Assert.That(user.Salt, Is.EqualTo("newSalt"));
+    }
+
+    [Test]
+    public async Task ExecuteUserUpdateFromTokenAsync_UsernameChange_ReturnStringEmpty()
+    {
+        // Arrange
+        var user = new User
+        {
+            Username = "oldUsername",
+            Email = null,
+            Password = null,
+            Salt = null,
+            Role = UserRole.User
+        };
+
+        var updateData = new RedisUserUpdate
+        {
+            Username = "newUsername",
+            Id = default
+        };
+
+        var token = new RedisConfirmationToken
+        {
+            TokenType = TokenType.UsernameChange,
+            Value = null
+        };
+
+        _mockUserDbRepo
+            .Setup(repo => repo.UpdateAsync(It.IsAny<User>()))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _userManager.ExecuteUserUpdateFromTokenAsync(user, updateData, token);
+
+        // Assert
+        Assert.That(result, Is.EqualTo(string.Empty));
+        Assert.That(user.Username, Is.EqualTo("newUsername"));
+    }
+
+    [Test]
+    public async Task ExecuteUserUpdateFromTokenAsync_TokenIsNull_ReturnsInvalidTokenMessage()
+    {
+        // Arrange
+        var user = new User
+        {
+            Role = UserRole.User,
+            Username = null,
+            Email = null,
+            Password = null,
+            Salt = null
+        };
+
+        // Act
+        var result = await _userManager.ExecuteUserUpdateFromTokenAsync(user, null, null);
+
+        // Assert
+        Assert.That(result, Is.EqualTo("Invalid token"));
+    }
+
+    [Test]
+    public async Task ExecuteUserUpdateFromTokenAsync_InvalidTokenType_ReturnsInvalidTokenMessage()
+    {
+        // Arrange
+        var token = new RedisConfirmationToken
+        {
+            TokenType = TokenType.Unknown,
+            Value = null
+        };
+
+        // Act
+        var result = await _userManager.ExecuteUserUpdateFromTokenAsync(null, null, token);
+
+        // Assert
+        Assert.That(result, Is.EqualTo("Invalid token"));
+    }
+
+    [Test]
+    public async Task ExecuteUserUpdateFromTokenAsync_RegistrationConfirmation_UserIsNull_ReturnsActivationError()
+    {
+        // Arrange
+        var token = new RedisConfirmationToken
+        {
+            TokenType = TokenType.RegistrationConfirmation,
+            Value = null
+        };
+
+        // Act
+        var result = await _userManager.ExecuteUserUpdateFromTokenAsync(null, null, token);
+
+        // Assert
+        Assert.That(result, Is.EqualTo("Activation error"));
+    }
+
+    [Test]
+    public async Task ExecuteUserUpdateFromTokenAsync_EmailChangeNew_UserIsNull_ReturnsErrorChangingEmail()
+    {
+        // Arrange
+        var updateData = new RedisUserUpdate
+        {
+            Email = "new@example.com",
+            Id = default
+        };
+        var token = new RedisConfirmationToken
+        {
+            TokenType = TokenType.EmailChangeNew,
+            Value = null
+        };
+
+        // Act
+        var result = await _userManager.ExecuteUserUpdateFromTokenAsync(null, updateData, token);
+
+        // Assert
+        Assert.That(result, Is.EqualTo("An error occurred while changing email"));
+    }
+
+    [Test]
+    public async Task ExecuteUserUpdateFromTokenAsync_EmailChangeNew_EmailIsNullOrEmpty_ReturnsErrorChangingEmail()
+    {
+        // Arrange
+        var user = new User
+        {
+            Email = "old@example.com",
+            Username = null,
+            Password = null,
+            Salt = null,
+            Role = UserRole.User
+        };
+
+        var updateData = new RedisUserUpdate
+        {
+            Email = null,
+            Id = default
+        };
+
+        var token = new RedisConfirmationToken
+        {
+            TokenType = TokenType.EmailChangeNew,
+            Value = null
+        };
+
+        // Act
+        var result = await _userManager.ExecuteUserUpdateFromTokenAsync(user, updateData, token);
+
+        // Assert
+        Assert.That(result, Is.EqualTo("An error occurred while changing email"));
+    }
+
+    [Test]
+    public async Task ExecuteUserUpdateFromTokenAsync_PasswordChange_UserIsNull_ReturnsErrorChangingPassword()
+    {
+        // Arrange
+        var updateData = new RedisUserUpdate
+        {
+            Password = "newPass",
+            Salt = "newSalt",
+            Id = default
+        };
+
+        var token = new RedisConfirmationToken
+        {
+            TokenType = TokenType.PasswordChange,
+            Value = null
+        };
+
+        // Act
+        var result = await _userManager.ExecuteUserUpdateFromTokenAsync(null, updateData, token);
+
+        // Assert
+        Assert.That(result, Is.EqualTo("An error occurred while changing password"));
+    }
+
+    [Test]
+    public async Task ExecuteUserUpdateFromTokenAsync_PasswordChange_PasswordOrSaltIsNull_ReturnsErrorChangingPassword()
+    {
+        // Arrange
+        var user = new User
+        {
+            Password = "oldPass",
+            Salt = "oldSalt",
+            Username = null,
+            Email = null,
+            Role = UserRole.User
+        };
+
+        var updateData = new RedisUserUpdate
+        {
+            Password = null,
+            Salt = null,
+            Id = default
+        };
+
+        var token = new RedisConfirmationToken
+        {
+            TokenType = TokenType.PasswordChange,
+            Value = null
+        };
+
+        // Act
+        var result = await _userManager.ExecuteUserUpdateFromTokenAsync(user, updateData, token);
+
+        // Assert
+        Assert.That(result, Is.EqualTo("An error occurred while changing password"));
+    }
+
+    [Test]
+    public async Task ExecuteUserUpdateFromTokenAsync_UsernameChange_UserIsNull_ReturnsErrorChangingUsername()
+    {
+        // Arrange
+        var updateData = new RedisUserUpdate
+        {
+            Username = "newUsername",
+            Id = default
+        };
+
+        var token = new RedisConfirmationToken
+        {
+            TokenType = TokenType.UsernameChange,
+            Value = null
+        };
+
+        // Act
+        var result = await _userManager.ExecuteUserUpdateFromTokenAsync(null, updateData, token);
+
+        // Assert
+        Assert.That(result, Is.EqualTo("An error occurred while changing username"));
+    }
+
+    [Test]
+    public async Task
+        ExecuteUserUpdateFromTokenAsync_UsernameChange_UsernameIsNullOrEmpty_ReturnsErrorChangingUsername()
+    {
+        // Arrange
+        var user = new User
+        {
+            Username = "oldUsername",
+            Email = null,
+            Password = null,
+            Salt = null,
+            Role = UserRole.User
+        };
+
+        var updateData = new RedisUserUpdate
+        {
+            Username = null,
+            Id = default
+        };
+
+        var token = new RedisConfirmationToken
+        {
+            TokenType = TokenType.UsernameChange,
+            Value = null
+        };
+
+        // Act
+        var result = await _userManager.ExecuteUserUpdateFromTokenAsync(user, updateData, token);
+
+        // Assert
+        Assert.That(result, Is.EqualTo("An error occurred while changing username"));
+    }
+
+    #endregion
+
     #region ValidateUserIdentityTest
 
     [Test]
@@ -351,7 +796,7 @@ public class UserManagerTest
         // Assert
         Assert.That(result, Is.Empty);
     }
-    
+
     [Test]
     public void ValidateUserIdentity_ValidIdentityWithComparison_ReturnsEmptyString()
     {
@@ -386,7 +831,7 @@ public class UserManagerTest
         // Assert
         Assert.That(result, Is.EqualTo("Authorization failed due to an invalid or missing role in the provided token"));
     }
-    
+
     [Test]
     public void ValidateUserIdentity_MissingUserId_ReturnsAuthorizationFailedMessage()
     {
@@ -437,7 +882,7 @@ public class UserManagerTest
         // Act
         var ex = Assert.Throws<ArgumentNullException>(() =>
             _userManager.ValidateUserIdentity(claims, userId, null, (r1, r2) => r1 == r2));
-        
+
         // Assert
         Assert.That(ex, Is.Not.Null);
         Assert.That(ex.ParamName, Is.EqualTo("compareRole"));
@@ -461,6 +906,38 @@ public class UserManagerTest
         // Assert
         Assert.That(result, Is.EqualTo("You do not have permission to access other users' data"));
     }
-    
+
+    #endregion
+
+    #region GeneratePasswordUpdateEntityAsyncTest
+
+    [Test]
+    public void GeneratePasswordUpdateEntityAsync_ValidPassword_ReturnsValidRedisUserUpdate()
+    {
+        // Arrange
+        var newPassword = "StrongPassword123!";
+
+        // Act
+        var result = _userManager.GeneratePasswordUpdateEntityAsync(newPassword);
+
+        // Assert
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result.Password, Is.Not.Null.And.Not.Empty);
+        Assert.That(result.Salt, Is.Not.Null.And.Not.Empty);
+    }
+
+    [Test]
+    public void GeneratePasswordUpdateEntityAsync_EmptyPassword_ReturnsNull()
+    {
+        // Arrange
+        var newPassword = string.Empty;
+
+        // Act
+        var result = _userManager.GeneratePasswordUpdateEntityAsync(newPassword);
+
+        // Assert
+        Assert.That(result, Is.Null);
+    }
+
     #endregion
 }
