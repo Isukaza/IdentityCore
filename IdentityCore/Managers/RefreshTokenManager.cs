@@ -16,21 +16,28 @@ public class RefreshTokenManager : IRefreshTokenManager
         _refreshTokenDbRepo = refreshTokenDbRepository;
     }
 
-    public RefreshToken CreateRefreshToken(User user) =>
-        new()
+    public RefreshToken CreateRefreshToken(User user)
+    {
+        if (user is null)
+            return null;
+
+        return new RefreshToken
         {
             RefToken = UserHelper.GetToken(user.Id),
             Expires = DateTime.UtcNow.Add(RefToken.Configs.Expires),
             User = user
         };
+    }
 
     public async Task<bool> AddTokenAsync(User user, RefreshToken refreshToken)
     {
+        if (user is null || refreshToken is null)
+            return false;
+
         var countTokens = await _refreshTokenDbRepo.GetCountUserTokensAsync(user.Id);
         if (countTokens >= RefToken.Configs.MaxSessions)
         {
             var tokensToRemove = countTokens - RefToken.Configs.MaxSessions + 1;
-
             for (var i = 0; i < tokensToRemove; i++)
             {
                 await _refreshTokenDbRepo.DeleteOldestSessionAsync(user.Id);
@@ -42,6 +49,9 @@ public class RefreshTokenManager : IRefreshTokenManager
 
     public async Task<string> UpdateTokenDbAsync(RefreshToken token)
     {
+        if (token is null)
+            return string.Empty;
+
         token.RefToken = UserHelper.GetToken(token.UserId);
         token.Expires = DateTime.UtcNow.Add(RefToken.Configs.Expires);
 
@@ -50,6 +60,9 @@ public class RefreshTokenManager : IRefreshTokenManager
 
     public async Task<OperationResult<RefreshToken>> ValidationRefreshTokenAsync(Guid userId, string token)
     {
+        if (string.IsNullOrWhiteSpace(token))
+            return new OperationResult<RefreshToken>("Invalid input data");
+
         var tokenDb = await _refreshTokenDbRepo.GetTokenByUserIdAsync(userId, token);
         if (tokenDb is null)
             return new OperationResult<RefreshToken>("Invalid input data");
