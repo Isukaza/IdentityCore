@@ -526,8 +526,6 @@ public class UserController : Controller
 
     #region CommonMethods
 
-#if DEBUG
-
     /// <summary>
     /// Generates a salt string of the specified size.
     /// </summary>
@@ -598,8 +596,6 @@ public class UserController : Controller
         var passwordHash = UserHelper.GetPasswordHash(password, salt);
         return await StatusCodes.Status200OK.ResultState("Password hash", passwordHash);
     }
-
-#endif
 
     #endregion
 }

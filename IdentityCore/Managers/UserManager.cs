@@ -292,6 +292,9 @@ public class UserManager : IUserManager
 
     private string HandleEmailChangeOld(RedisConfirmationToken token)
     {
+        if (token is null)
+            return "Error changing email";
+        
         var tokenEmailNew = new RedisConfirmationToken
         {
             UserId = token.UserId,

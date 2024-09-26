@@ -72,7 +72,7 @@ public class CfmTokenManager : ICfmTokenManager
     {
         if (tokenType == TokenType.Unknown)
             return null;
-        
+
         var ttl = TokenConfig.GetTtlForTokenType(tokenType);
         var token = new RedisConfirmationToken
         {
