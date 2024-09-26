@@ -213,6 +213,73 @@ public class UserController : Controller
     }
 
     /// <summary>
+    /// Initiates a password reset request for the specified email address.
+    /// </summary>
+    /// <param name="email">The email address associated with the user account for which the password reset is requested.</param>
+    /// <returns>Returns the status of the password reset request.</returns>
+    /// <response code="200">Password reset request was processed successfully.</response>
+    /// <response code="400">The email address provided is invalid or does not meet validation criteria.</response>
+    /// <response code="500">An error occurred during the password reset process or the email could not be sent.</response>
+    [HttpPost("request-password-reset")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> RequestPasswordReset([Required] [EmailAddress] string email)
+    {
+        var user = await _userManager.GetUserByEmailAsync(email);
+        if (user == null)
+            return await StatusCodes.Status200OK.ResultState();
+
+        const TokenType tokenType = TokenType.PasswordReset;
+        var existingToken = await _ctManager.GetTokenByUserIdAsync(user.Id, tokenType);
+        if (existingToken != null)
+        {
+            var timeForNextAttempt = _ctManager.GetNextAttemptTime(existingToken);
+            if (!string.IsNullOrEmpty(timeForNextAttempt))
+                return await StatusCodes.Status200OK.ResultState();
+        }
+
+        var cfmToken = existingToken is null
+            ? _ctManager.CreateToken(user.Id, tokenType)
+            : await _ctManager.UpdateTokenAsync(existingToken);
+
+        var cfmLink = MailConfig.GetConfirmationLink(cfmToken.Value, cfmToken.TokenType);
+        _ = await _mailManager.SendEmailAsync(email, tokenType, cfmLink, user);
+
+        return await StatusCodes.Status200OK.ResultState();
+    }
+
+    /// <summary>
+    /// Confirms a password reset request using the provided token and new password.
+    /// </summary>
+    /// <param name="passwordResetCfm">The password reset confirmation request containing the token and new password.</param>
+    /// <returns>Returns the status of the password reset confirmation process.</returns>
+    /// <response code="200">Password reset confirmed successfully. The user's password has been updated.</response>
+    /// <response code="400">The provided token is invalid, or the input data does not meet validation criteria.</response>
+    /// <response code="500">An error occurred during the password reset process.</response>
+    [AllowAnonymous]
+    [HttpPost("password-reset/confirm")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ConfirmPasswordReset([FromBody] PasswordResetCfm passwordResetCfm)
+    {
+        var token = await _ctManager.GetTokenAsync(passwordResetCfm.Token, TokenType.PasswordReset);
+        if (token is null)
+            return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
+
+        var user = await _userManager.GetUserByIdAsync(token.UserId);
+        if (user is null)
+            return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
+
+        var userUpd = _userManager.GeneratePasswordUpdateEntityAsync(passwordResetCfm.Password);
+
+        var executionError = await _userManager.ExecuteUserUpdateFromTokenAsync(user, userUpd, token);
+        if (string.IsNullOrEmpty(executionError))
+            _ = await _ctManager.DeleteTokenAsync(token);
+
+        return string.IsNullOrEmpty(executionError)
+            ? await StatusCodes.Status200OK.ResultState("Operation was successfully completed")
+            : await StatusCodes.Status500InternalServerError.ResultState(executionError);
+    }
+
+    /// <summary>
     /// Sends a confirmation email for a new email address change.
     /// </summary>
     /// <remarks>

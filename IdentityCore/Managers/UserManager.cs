@@ -276,7 +276,7 @@ public class UserManager : IUserManager
             TokenType.RegistrationConfirmation => await HandleRegistrationConfirmation(user),
             TokenType.EmailChangeOld => HandleEmailChangeOld(token),
             TokenType.EmailChangeNew => await HandleEmailChangeNew(user, userUpdData),
-            TokenType.PasswordChange => await HandlePasswordChange(user, userUpdData),
+            TokenType.PasswordChange or TokenType.PasswordReset => await HandlePasswordChange(user, userUpdData),
             TokenType.UsernameChange => await HandleUsernameChange(user, userUpdData),
             _ => "Invalid token"
         };
