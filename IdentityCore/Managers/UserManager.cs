@@ -38,6 +38,9 @@ public class UserManager : IUserManager
 
     public async Task<User> GetUserByIdAsync(Guid id) =>
         await _userDbRepo.GetUserByIdAsync(id);
+    
+    public async Task<User> GetUserByEmailAsync(string email) =>
+        await _userDbRepo.GetUserByEmailAsync(email);
 
     public async Task<User> GetUserByTokenTypeAsync(Guid id, TokenType tokenType) =>
         tokenType == TokenType.RegistrationConfirmation
@@ -485,6 +488,19 @@ public class UserManager : IUserManager
 
     #region Common
 
+    public RedisUserUpdate GeneratePasswordUpdateEntityAsync(string newPassword)
+    {
+        var salt = UserHelper.GenerateSalt();
+        var hashedPassword = UserHelper.GetPasswordHash(newPassword, salt);
+    
+        return new RedisUserUpdate
+        {
+            Id = default,
+            Password = hashedPassword,
+            Salt = salt
+        };
+    }
+    
     private async Task<string> GenerateUniqueUsernameAsync(string username)
     {
         username = username.Replace(" ", "_");

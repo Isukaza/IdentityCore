@@ -12,6 +12,7 @@ public interface IUserManager
 {
     Task<User> GetUserByIdAsync(Guid id);
     Task<T> GetUserByIdAsync<T>(string prefix, Guid id);
+    Task<User> GetUserByEmailAsync(string email);
     Task<User> GetUserByTokenTypeAsync(Guid id, TokenType tokenType);
     Task<OperationResult<User>> GetUserSsoAsync(string email);
 
@@ -38,4 +39,6 @@ public interface IUserManager
     Task<OperationResult<User>> ValidateUserUpdateAsync(UserUpdateRequest updateData);
     Task<OperationResult<User>> ValidateLoginAsync(UserLoginRequest loginRequest);
     Task<string> ValidateRegistrationAsync(UserCreateRequest userCreateRequest);
+
+    RedisUserUpdate GeneratePasswordUpdateEntityAsync(string newPassword);
 }
