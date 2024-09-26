@@ -21,10 +21,16 @@ public class AuthenticationManager : IAuthenticationManager
         _refTokenDbRepo = refTokenDbRepo;
         _refTokenManager = refTokenManager;
     }
-    
+
     public async Task<OperationResult<LoginResponse>> CreateLoginTokensAsync(User user)
     {
+        if (user is null)
+            return new OperationResult<LoginResponse>("Invalid input data");
+
         var refreshToken = _refTokenManager.CreateRefreshToken(user);
+        if (refreshToken is null)
+            return new OperationResult<LoginResponse>("Error creating session");
+
         if (!await _refTokenManager.AddTokenAsync(user, refreshToken))
             return new OperationResult<LoginResponse>("Error creating session");
 
@@ -38,26 +44,11 @@ public class AuthenticationManager : IAuthenticationManager
         return new OperationResult<LoginResponse>(loginResponse);
     }
 
-    private static string CreateJwt(User user)
-    {
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new(ClaimTypes.Role, user.Role.ToString())
-        };
-
-        var jwt = new JwtSecurityToken(
-            issuer: Jwt.Configs.Issuer,
-            audience: Jwt.Configs.Audience,
-            claims: claims,
-            expires: DateTime.UtcNow.Add(Jwt.Configs.Expires),
-            signingCredentials: new SigningCredentials(Jwt.Configs.Key, SecurityAlgorithms.HmacSha256));
-
-        return new JwtSecurityTokenHandler().WriteToken(jwt);
-    }
-    
     public async Task<OperationResult<LoginResponse>> RefreshLoginTokensAsync(RefreshToken token)
     {
+        if (token is null)
+            return new OperationResult<LoginResponse>("Invalid operation");
+
         var updatedToken = await _refTokenManager.UpdateTokenDbAsync(token);
         if (string.IsNullOrWhiteSpace(updatedToken))
             return new OperationResult<LoginResponse>("Invalid operation");
@@ -74,6 +65,9 @@ public class AuthenticationManager : IAuthenticationManager
 
     public async Task<string> LogoutAsync(Guid userId, string refreshToken)
     {
+        if (string.IsNullOrWhiteSpace(refreshToken))
+            return "Invalid refresh token";
+
         var token = await _refTokenDbRepo.GetTokenByUserIdAsync(userId, refreshToken);
         if (token is null)
             return "The user was not found or was deleted";
@@ -81,5 +75,23 @@ public class AuthenticationManager : IAuthenticationManager
         return await _refTokenDbRepo.DeleteAsync(token)
             ? string.Empty
             : "Error during deletion";
+    }
+
+    private static string CreateJwt(User user)
+    {
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new(ClaimTypes.Role, nameof(user.Role))
+        };
+
+        var jwt = new JwtSecurityToken(
+            issuer: Jwt.Configs.Issuer,
+            audience: Jwt.Configs.Audience,
+            claims: claims,
+            expires: DateTime.UtcNow.Add(Jwt.Configs.Expires),
+            signingCredentials: new SigningCredentials(Jwt.Configs.Key, SecurityAlgorithms.HmacSha256));
+
+        return new JwtSecurityTokenHandler().WriteToken(jwt);
     }
 }
