@@ -114,40 +114,6 @@ public class ConfirmationController : Controller
     }
 
     /// <summary>
-    /// Confirms a password reset request using the provided token and new password.
-    /// </summary>
-    /// <param name="passwordResetCfm">The password reset confirmation request containing the token and new password.</param>
-    /// <returns>Returns the status of the password reset confirmation process.</returns>
-    /// <response code="200">Password reset confirmed successfully. The user's password has been updated.</response>
-    /// <response code="400">The provided token is invalid, or the input data does not meet validation criteria.</response>
-    /// <response code="500">An error occurred during the password reset process.</response>
-    [AllowAnonymous]
-    [HttpPost("password-reset/confirm")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> ConfirmPasswordReset([FromBody] PasswordResetCfm passwordResetCfm)
-    {
-        var token = await _ctManager.GetTokenAsync(passwordResetCfm.Token, TokenType.PasswordReset);
-        if (token is null)
-            return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
-
-        var user = await _userManager.GetUserByIdAsync(token.UserId);
-        if (user is null)
-            return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
-
-        var userUpd = _userManager.GeneratePasswordUpdateEntityAsync(passwordResetCfm.Password);
-        if (userUpd is null)
-            return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
-
-        var executionError = await _userManager.ExecuteUserUpdateFromTokenAsync(user, userUpd, token);
-        if (string.IsNullOrEmpty(executionError))
-            _ = await _ctManager.DeleteTokenAsync(token);
-
-        return string.IsNullOrEmpty(executionError)
-            ? await StatusCodes.Status200OK.ResultState("Operation was successfully completed")
-            : await StatusCodes.Status500InternalServerError.ResultState(executionError);
-    }
-
-    /// <summary>
     /// Resends a registration confirmation token.
     /// </summary>
     /// <param name="tokenRequest">The token request details.</param>
@@ -182,6 +148,40 @@ public class ConfirmationController : Controller
             return await StatusCodes.Status403Forbidden.ResultState(error);
 
         return await HandleTokenResend(tokenRequest, false);
+    }
+
+    /// <summary>
+    /// Confirms a password reset request using the provided token and new password.
+    /// </summary>
+    /// <param name="passwordResetCfm">The password reset confirmation request containing the token and new password.</param>
+    /// <returns>Returns the status of the password reset confirmation process.</returns>
+    /// <response code="200">Password reset confirmed successfully. The user's password has been updated.</response>
+    /// <response code="400">The provided token is invalid, or the input data does not meet validation criteria.</response>
+    /// <response code="500">An error occurred during the password reset process.</response>
+    [AllowAnonymous]
+    [HttpPost("password-reset/confirm")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ConfirmPasswordReset([FromBody] PasswordResetCfm passwordResetCfm)
+    {
+        var token = await _ctManager.GetTokenAsync(passwordResetCfm.Token, TokenType.PasswordReset);
+        if (token is null)
+            return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
+
+        var user = await _userManager.GetUserByIdAsync(token.UserId);
+        if (user is null)
+            return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
+
+        var userUpd = _userManager.GeneratePasswordUpdateEntityAsync(passwordResetCfm.Password);
+        if (userUpd is null)
+            return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
+
+        var executionError = await _userManager.ExecuteUserUpdateFromTokenAsync(user, userUpd, token);
+        if (string.IsNullOrEmpty(executionError))
+            _ = await _ctManager.DeleteTokenAsync(token);
+
+        return string.IsNullOrEmpty(executionError)
+            ? await StatusCodes.Status200OK.ResultState("Operation was successfully completed")
+            : await StatusCodes.Status500InternalServerError.ResultState(executionError);
     }
 
     private async Task<IActionResult> HandleTokenConfirmation(CfmTokenRequest tokenRequest, bool isRegistrationProcess)

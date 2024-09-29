@@ -162,6 +162,44 @@ public class UserController : Controller
     }
 
     /// <summary>
+    /// Deletes an existing user.
+    /// </summary>
+    /// <param name="userId">The unique identifier of the user to be deleted.</param>
+    /// <returns>Returns the status of the deletion.</returns>
+    /// <response code="200">User deleted successfully.</response>
+    /// <response code="401">Unauthorized. The user is not authenticated.</response>
+    /// <response code="403">Forbidden. User does not have permission to delete the requested user.</response>
+    /// <response code="404">The user with the specified ID was not found.</response>
+    /// <response code="500">An error occurred during the user deletion.</response>
+    [HttpDelete("delete")]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
+    public async Task<IActionResult> DeleteUser([Required] Guid userId)
+    {
+        var error = _userManager.ValidateUserIdentity(
+            HttpContext.User.Claims.ToList(),
+            userId,
+            UserRole.SuperAdmin,
+            (userRole, compareRole) => userRole == compareRole);
+        if (!string.IsNullOrEmpty(error))
+            return await StatusCodes.Status403Forbidden.ResultState(error);
+
+        var userToDeleted = await _userManager.GetUserByIdAsync(userId);
+        if (userToDeleted is null)
+            return await StatusCodes.Status404NotFound.ResultState("User not found");
+
+        if (userToDeleted.Role == UserRole.SuperAdmin)
+            return await StatusCodes.Status403Forbidden.ResultState("SU cannot be deleted");
+
+        return await _userManager.DeleteUserAsync(userToDeleted)
+            ? await StatusCodes.Status200OK.ResultState("User deleted")
+            : await StatusCodes.Status500InternalServerError.ResultState("Error when deleting user");
+    }
+
+    #endregion
+
+    #region ModificationRequests
+
+    /// <summary>
     /// Initiates a request to update the data of an existing user, and sends a request for email confirmation.
     /// </summary>
     /// <param name="updateRequest">The new details of the user.</param>
