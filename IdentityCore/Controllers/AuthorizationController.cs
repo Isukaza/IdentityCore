@@ -12,7 +12,7 @@ namespace IdentityCore.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthorizationController : ControllerBase
+public class AuthorizationController : Controller
 {
     #region C-tor and fields
 

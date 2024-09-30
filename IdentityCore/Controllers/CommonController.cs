@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace IdentityCore.Controllers;
 
+[ApiController]
+[Route("/[controller]")]
 [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)}, {nameof(UserRole.Admin)}")]
 public class CommonController : Controller
 {
