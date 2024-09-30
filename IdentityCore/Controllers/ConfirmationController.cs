@@ -13,6 +13,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace IdentityCore.Controllers;
 
+[ApiController]
+[Route("/[controller]")]
 public class ConfirmationController : Controller
 {
     #region C-tor and fields
