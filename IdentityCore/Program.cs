@@ -54,13 +54,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddDbContext<IdentityCoreDbContext>(options =>
 {
-    var connectionString = builder.Configuration.GetConnectionString("PostgreSQLConnection");
+    var connectionString = builder.Configuration.GetConnectionString("PostgreSQL");
     options.UseNpgsql(connectionString);
 });
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
 {
-    var redisConnectionUrl = builder.Configuration.GetConnectionString("RedisConnectionUrl");
+    var redisConnectionUrl = builder.Configuration.GetConnectionString("Redis");
     if (string.IsNullOrEmpty(redisConnectionUrl))
     {
         throw new InvalidOperationException("RedisConnectionUrl is not configured.");
