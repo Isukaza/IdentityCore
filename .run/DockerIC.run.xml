@@ -9,21 +9,42 @@
         <option name="envVars">
           <list>
             <DockerEnvVarImpl>
-              <option name="name" value="ENV ASPNETCORE_URLS" />
-              <option name="value" value="https://+:7433 " />
+              <option name="name" value="ASPNETCORE_ENVIRONMENT" />
+              <option name="value" value="Development" />
+            </DockerEnvVarImpl>
+            <DockerEnvVarImpl>
+              <option name="name" value="ASPNETCORE_Kestrel__Certificates__Default__Password" />
+              <option name="value" value="your_password" />
+            </DockerEnvVarImpl>
+            <DockerEnvVarImpl>
+              <option name="name" value="ASPNETCORE_Kestrel__Certificates__Default__Path" />
+              <option name="value" value="/https/IdentityCore.pfx" />
+            </DockerEnvVarImpl>
+            <DockerEnvVarImpl>
+              <option name="name" value="ASPNETCORE_URLS" />
+              <option name="value" value="https://+:7433" />
             </DockerEnvVarImpl>
           </list>
         </option>
         <option name="portBindings">
           <list>
             <DockerPortBindingImpl>
-              <option name="containerPort" value="80" />
-              <option name="hostPort" value="8080" />
+              <option name="containerPort" value="7433" />
+              <option name="hostPort" value="7433" />
             </DockerPortBindingImpl>
           </list>
         </option>
-        <option name="commandLineOptions" value="--network bridge" />
+        <option name="commandLineOptions" value="--network soundify" />
         <option name="sourceFilePath" value="IdentityCore/Dockerfile" />
+        <option name="volumeBindings">
+          <list>
+            <DockerVolumeBindingImpl>
+              <option name="containerPath" value="/https" />
+              <option name="hostPath" value="$USER_HOME$/.aspnet/https" />
+              <option name="readOnly" value="true" />
+            </DockerVolumeBindingImpl>
+          </list>
+        </option>
       </settings>
     </deployment>
     <EXTENSION ID="com.jetbrains.rider.docker.debug" isFastModeEnabled="true" isSslEnabled="false" />
