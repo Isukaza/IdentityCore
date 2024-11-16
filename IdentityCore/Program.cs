@@ -5,6 +5,10 @@ using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+
+using RabbitMQ.Messaging;
+using StackExchange.Redis;
+
 using IdentityCore.Configuration;
 using IdentityCore.DAL.PostgreSQL;
 using IdentityCore.DAL.PostgreSQL.Repositories.Base;
@@ -15,7 +19,6 @@ using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.cache;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.db;
 using IdentityCore.Managers;
 using IdentityCore.Managers.Interfaces;
-using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -67,6 +70,15 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
     return ConnectionMultiplexer.Connect(redisConnectionUrl);
 });
 
+builder.Services.AddSingleton<IRabbitMqConnection>(
+    new RabbitMqConnection(
+        RabbitMqConfig.Values.Host,
+        RabbitMqConfig.Values.Queue,
+        RabbitMqConfig.Values.User,
+        RabbitMqConfig.Values.Password,
+        RabbitMqConfig.Values.Port)
+);
+
 builder.Services.AddScoped<ICacheRepositoryBase, CacheRepositoryBase>();
 builder.Services.AddScoped<ICfmTokenCacheRepository, CfmTokenCacheRepository>();
 builder.Services.AddScoped<IRefreshTokenDbRepository, RefreshTokenDbRepository>();
@@ -76,7 +88,7 @@ builder.Services.AddScoped<IUserDbRepository, UserDbRepository>();
 builder.Services.AddScoped<IAuthenticationManager, AuthenticationManager>();
 builder.Services.AddScoped<ICfmTokenManager, CfmTokenManager>();
 builder.Services.AddScoped<IGoogleManager, GoogleManager>();
-builder.Services.AddScoped<IMailManager, MailManager>();
+builder.Services.AddScoped<IMessageSenderManager, MessageSenderManager>();
 builder.Services.AddScoped<IRefreshTokenManager, RefreshTokenManager>();
 builder.Services.AddScoped<IUserManager, UserManager>();
 
