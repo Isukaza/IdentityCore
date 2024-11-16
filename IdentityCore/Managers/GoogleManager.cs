@@ -1,10 +1,10 @@
-using IdentityCore.Configuration;
-using IdentityCore.Managers.Interfaces;
-
 using Google.Apis.Auth;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Auth.OAuth2.Flows;
 using Google.Apis.Auth.OAuth2.Responses;
+
+using IdentityCore.Configuration;
+using IdentityCore.Managers.Interfaces;
 
 namespace IdentityCore.Managers;
 
