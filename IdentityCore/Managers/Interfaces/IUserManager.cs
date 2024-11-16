@@ -1,9 +1,11 @@
 using System.Security.Claims;
+
 using IdentityCore.DAL.PostgreSQL.Models.cache;
 using IdentityCore.DAL.PostgreSQL.Models.db;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
 using IdentityCore.DAL.PostgreSQL.Roles;
 using IdentityCore.Models;
+using IdentityCore.Models.Interface;
 using IdentityCore.Models.Request;
 
 namespace IdentityCore.Managers.Interfaces;
@@ -16,17 +18,18 @@ public interface IUserManager
     Task<User> GetUserByTokenTypeAsync(Guid id, TokenType tokenType);
     Task<OperationResult<User>> GetUserSsoAsync(string email);
 
-    RedisUserUpdate AddUserUpdateDataByTokenType(RedisUserUpdate userUpdateData, TokenType tokenType, TimeSpan ttl);
+    bool AddUserUpdateDataToRedis(RedisUserUpdate userUpdate);
     Task<User> CreateUserForRegistrationAsync(UserCreateRequest userData, Provider provider);
     Task<OperationResult<User>> CreateUserSsoAsync(string email, string name, Provider provider);
 
     Task<bool> UpdateUser(User user, SuUserUpdateRequest updateData);
-    Task<bool> UpdateTtlUserUpdateByTokenTypeAsync(RedisUserUpdate userData, TokenType tokenType, TimeSpan ttl);
+    RedisUserUpdate CreateUserUpdateEntity(IUserUpdate updateRequest, User user);
+    Task<bool> UpdateTtlUserUpdateByTokenTypeAsync(Guid userId, string username, string email, TokenType tokenType);
 
     Task<bool> DeleteUserAsync(User user);
     Task<bool> DeleteUserDataByTokenTypeAsync(Guid id, string username, string email, TokenType tokenType);
 
-    Task<string> ExecuteUserUpdateFromTokenAsync(User user, RedisUserUpdate userUpdData, RedisConfirmationToken token);
+    Task<string> ExecuteUserUpdateFromTokenAsync(User user, RedisUserUpdate userUpd, RedisConfirmationToken token);
 
     Task<bool> IsUserUpdateInProgressAsync(Guid id);
     Task<bool> UserExistsByEmailAsync(string email);

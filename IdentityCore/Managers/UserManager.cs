@@ -1,4 +1,5 @@
 using System.Security.Claims;
+
 using Helpers;
 using IdentityCore.Configuration;
 using IdentityCore.DAL.PostgreSQL.Models.cache;
@@ -10,6 +11,7 @@ using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.db;
 using IdentityCore.DAL.PostgreSQL.Roles;
 using IdentityCore.Managers.Interfaces;
 using IdentityCore.Models;
+using IdentityCore.Models.Interface;
 using IdentityCore.Models.Request;
 
 namespace IdentityCore.Managers;
@@ -60,27 +62,27 @@ public class UserManager : IUserManager
         return new OperationResult<User>(user);
     }
 
-    public RedisUserUpdate AddUserUpdateDataByTokenType(RedisUserUpdate userUpdateData, TokenType tokenType,
-        TimeSpan ttl)
+    public bool AddUserUpdateDataToRedis(RedisUserUpdate userUpdate)
     {
+        var ttl = TokenConfig.GetTtlForTokenType(userUpdate.ChangeType);
         var isUserUpdateRequestAdded = _userCacheRepo
-            .AddEntityToCache(RedisPrefixes.User.Update, userUpdateData.Id, userUpdateData, ttl);
+            .AddEntityToCache(RedisPrefixes.User.Update, userUpdate.Id, userUpdate, ttl);
         if (!isUserUpdateRequestAdded)
-            return null;
+            return false;
 
         bool isAdditionalMappingUpdated;
-        switch (tokenType)
+        switch (userUpdate.ChangeType)
         {
             case TokenType.UsernameChange:
             {
                 isAdditionalMappingUpdated = _userCacheRepo
-                    .AddMappingToCache(RedisPrefixes.User.Name, userUpdateData.Username, ttl);
+                    .AddMappingToCache(RedisPrefixes.User.Name, userUpdate.NewValue, ttl);
                 break;
             }
             case TokenType.EmailChangeOld:
             {
                 isAdditionalMappingUpdated = _userCacheRepo
-                    .AddMappingToCache(RedisPrefixes.User.Email, userUpdateData.Email, ttl);
+                    .AddMappingToCache(RedisPrefixes.User.Email, userUpdate.NewValue, ttl);
                 break;
             }
             default:
@@ -88,7 +90,7 @@ public class UserManager : IUserManager
                 break;
         }
 
-        return isAdditionalMappingUpdated ? userUpdateData : null;
+        return isAdditionalMappingUpdated;
     }
 
     public async Task<User> CreateUserForRegistrationAsync(UserCreateRequest userData, Provider provider)
@@ -175,6 +177,34 @@ public class UserManager : IUserManager
 
         return await _userDbRepo.UpdateAsync(user);
     }
+    
+    public RedisUserUpdate CreateUserUpdateEntity(IUserUpdate updateRequest, User user)
+    {
+        var updateData = new RedisUserUpdate
+        {
+            Id = updateRequest.Id,
+            ChangeType = TokenType.Unknown
+        };
+        
+        if (!string.IsNullOrWhiteSpace(updateRequest.Username))
+        {
+            updateData.ChangeType = TokenType.UsernameChange;
+            updateData.NewValue = updateRequest.Username;
+        }
+        else if (!string.IsNullOrWhiteSpace(updateRequest.NewPassword))
+        {
+            updateData.ChangeType = TokenType.PasswordChange;
+            updateData.Salt = UserHelper.GenerateSalt(); 
+            updateData.NewValue =  UserHelper.GetPasswordHash(updateRequest.NewPassword, updateData.Salt);
+        }
+        else if (!string.IsNullOrWhiteSpace(updateRequest.Email))
+        {
+            updateData.ChangeType = TokenType.EmailChangeOld;
+            updateData.NewValue = updateRequest.Email;
+        }
+
+        return updateData;
+    }
 
     private async Task<bool> UpdateUserProviderAsync(User user, Provider provider)
     {
@@ -186,35 +216,37 @@ public class UserManager : IUserManager
         user is not null && await _userDbRepo.DeleteAsync(user);
 
     public async Task<bool> UpdateTtlUserUpdateByTokenTypeAsync(
-        RedisUserUpdate userData,
-        TokenType tokenType,
-        TimeSpan ttl)
+        Guid userId,
+        string username,
+        string email,
+        TokenType tokenType)
     {
+        var ttl = TokenConfig.GetTtlForTokenType(tokenType);
         var userCachePrefix = tokenType == TokenType.RegistrationConfirmation
             ? RedisPrefixes.User.Registration
             : RedisPrefixes.User.Update;
 
         var tasks = new List<Task<bool>>
         {
-            _userCacheRepo.UpdateTtlEntityInCache(userCachePrefix, userData.Id.ToString(), ttl)
+            _userCacheRepo.UpdateTtlEntityInCache(userCachePrefix, userId.ToString(), ttl)
         };
 
         switch (tokenType)
         {
             case TokenType.RegistrationConfirmation:
             {
-                tasks.Add(_userCacheRepo.UpdateTtlEntityInCache(RedisPrefixes.User.Name, userData.Username, ttl));
-                tasks.Add(_userCacheRepo.UpdateTtlEntityInCache(RedisPrefixes.User.Email, userData.Email, ttl));
+                tasks.Add(_userCacheRepo.UpdateTtlEntityInCache(RedisPrefixes.User.Name, username, ttl));
+                tasks.Add(_userCacheRepo.UpdateTtlEntityInCache(RedisPrefixes.User.Email, email, ttl));
                 break;
             }
             case TokenType.UsernameChange:
             {
-                tasks.Add(_userCacheRepo.UpdateTtlEntityInCache(RedisPrefixes.User.Name, userData.Username, ttl));
+                tasks.Add(_userCacheRepo.UpdateTtlEntityInCache(RedisPrefixes.User.Name, username, ttl));
                 break;
             }
             case TokenType.EmailChangeOld:
             {
-                tasks.Add(_userCacheRepo.UpdateTtlEntityInCache(RedisPrefixes.User.Email, userData.Email, ttl));
+                tasks.Add(_userCacheRepo.UpdateTtlEntityInCache(RedisPrefixes.User.Email, email, ttl));
                 break;
             }
         }
@@ -268,7 +300,7 @@ public class UserManager : IUserManager
 
     public async Task<string> ExecuteUserUpdateFromTokenAsync(
         User user,
-        RedisUserUpdate userUpdData,
+        RedisUserUpdate userUpd,
         RedisConfirmationToken token)
     {
         if (token is null)
@@ -278,9 +310,9 @@ public class UserManager : IUserManager
         {
             TokenType.RegistrationConfirmation => await HandleRegistrationConfirmation(user),
             TokenType.EmailChangeOld => HandleEmailChangeOld(token),
-            TokenType.EmailChangeNew => await HandleEmailChangeNew(user, userUpdData),
-            TokenType.PasswordChange or TokenType.PasswordReset => await HandlePasswordChange(user, userUpdData),
-            TokenType.UsernameChange => await HandleUsernameChange(user, userUpdData),
+            TokenType.EmailChangeNew => await HandleEmailChangeNew(user, userUpd),
+            TokenType.PasswordChange or TokenType.PasswordReset => await HandlePasswordChange(user, userUpd),
+            TokenType.UsernameChange => await HandleUsernameChange(user, userUpd),
             _ => "Invalid token"
         };
     }
@@ -312,41 +344,42 @@ public class UserManager : IUserManager
         var isTokenUserIdAdded = _ctCacheRepo
             .Add(tokenEmailNew.UserId.ToString(), tokenEmailNew.Value, tokenEmailNew.TokenType, ttl);
 
+        Console.WriteLine(tokenEmailNew.Value);
         return isTokenAdded && isTokenUserIdAdded ? string.Empty : "Error changing email";
     }
 
-    private async Task<string> HandleEmailChangeNew(User user, RedisUserUpdate userUpdateData)
+    private async Task<string> HandleEmailChangeNew(User user, RedisUserUpdate userUpdate)
     {
-        if (user is null || string.IsNullOrEmpty(userUpdateData?.Email))
+        if (user is null || string.IsNullOrEmpty(userUpdate?.NewValue))
             return "An error occurred while changing email";
 
-        user.Email = userUpdateData.Email;
+        user.Email = userUpdate.NewValue;
         return await _userDbRepo.UpdateAsync(user)
             ? string.Empty
             : "An error occurred while changing email";
     }
 
-    private async Task<string> HandlePasswordChange(User user, RedisUserUpdate userUpdateData)
+    private async Task<string> HandlePasswordChange(User user, RedisUserUpdate userUpdate)
     {
         if (user is null
-            || userUpdateData is null
-            || string.IsNullOrEmpty(userUpdateData.Password)
-            || string.IsNullOrEmpty(userUpdateData.Salt))
+            || userUpdate is null
+            || string.IsNullOrEmpty(userUpdate.NewValue)
+            || string.IsNullOrEmpty(userUpdate.Salt))
             return "An error occurred while changing password";
 
-        user.Password = userUpdateData.Password;
-        user.Salt = userUpdateData.Salt;
+        user.Password = userUpdate.NewValue;
+        user.Salt = userUpdate.Salt;
         return await _userDbRepo.UpdateAsync(user)
             ? string.Empty
             : "An error occurred while changing password";
     }
 
-    private async Task<string> HandleUsernameChange(User user, RedisUserUpdate userUpdateData)
+    private async Task<string> HandleUsernameChange(User user, RedisUserUpdate userUpdate)
     {
-        if (user is null || string.IsNullOrEmpty(userUpdateData?.Username))
+        if (user is null || string.IsNullOrEmpty(userUpdate?.NewValue))
             return "An error occurred while changing username";
 
-        user.Username = userUpdateData.Username;
+        user.Username = userUpdate.NewValue;
         return await _userDbRepo.UpdateAsync(user)
             ? string.Empty
             : "An error occurred while changing username";
@@ -508,8 +541,9 @@ public class UserManager : IUserManager
         return new RedisUserUpdate
         {
             Id = default,
-            Password = hashedPassword,
-            Salt = salt
+            NewValue = hashedPassword,
+            Salt = salt,
+            ChangeType = TokenType.PasswordChange
         };
     }
 

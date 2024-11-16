@@ -120,7 +120,6 @@ public static class MockFactory
         services.AddScoped<IAuthenticationManager, AuthenticationManager>();
         services.AddScoped<IRefreshTokenManager, RefreshTokenManager>();
         services.AddScoped<ICfmTokenManager, CfmTokenManager>();
-        services.AddScoped<IMailManager, MailManager>();
 
         return services;
     }

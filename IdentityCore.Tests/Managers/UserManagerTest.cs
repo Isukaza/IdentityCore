@@ -456,8 +456,9 @@ public class UserManagerTest
 
         var updateData = new RedisUserUpdate
         {
-            Email = "new@example.com",
-            Id = default
+            NewValue = "new@example.com",
+            Id = default,
+            ChangeType = TokenType.EmailChangeNew
         };
 
         var token = new RedisConfirmationToken
@@ -493,9 +494,10 @@ public class UserManagerTest
 
         var updateData = new RedisUserUpdate
         {
-            Password = "newPass",
+            NewValue = "newPass",
             Salt = "newSalt",
-            Id = default
+            Id = default,
+            ChangeType = TokenType.PasswordChange
         };
 
         var token = new RedisConfirmationToken
@@ -532,8 +534,9 @@ public class UserManagerTest
 
         var updateData = new RedisUserUpdate
         {
-            Username = "newUsername",
-            Id = default
+            NewValue = "newUsername",
+            Id = default,
+            ChangeType = TokenType.UsernameChange
         };
 
         var token = new RedisConfirmationToken
@@ -614,8 +617,9 @@ public class UserManagerTest
         // Arrange
         var updateData = new RedisUserUpdate
         {
-            Email = "new@example.com",
-            Id = default
+            NewValue = "new@example.com",
+            Id = default,
+            ChangeType = TokenType.EmailChangeNew
         };
         var token = new RedisConfirmationToken
         {
@@ -645,8 +649,9 @@ public class UserManagerTest
 
         var updateData = new RedisUserUpdate
         {
-            Email = null,
-            Id = default
+            NewValue = null,
+            Id = default,
+            ChangeType = TokenType.EmailChangeNew
         };
 
         var token = new RedisConfirmationToken
@@ -668,9 +673,10 @@ public class UserManagerTest
         // Arrange
         var updateData = new RedisUserUpdate
         {
-            Password = "newPass",
+            NewValue = "newPass",
             Salt = "newSalt",
-            Id = default
+            Id = default,
+            ChangeType = TokenType.PasswordChange
         };
 
         var token = new RedisConfirmationToken
@@ -701,9 +707,10 @@ public class UserManagerTest
 
         var updateData = new RedisUserUpdate
         {
-            Password = null,
+            NewValue = null,
             Salt = null,
-            Id = default
+            Id = default,
+            ChangeType = TokenType.PasswordChange
         };
 
         var token = new RedisConfirmationToken
@@ -725,8 +732,9 @@ public class UserManagerTest
         // Arrange
         var updateData = new RedisUserUpdate
         {
-            Username = "newUsername",
-            Id = default
+            NewValue = "newUsername",
+            Id = default,
+            ChangeType = TokenType.UsernameChange
         };
 
         var token = new RedisConfirmationToken
@@ -758,8 +766,9 @@ public class UserManagerTest
 
         var updateData = new RedisUserUpdate
         {
-            Username = null,
-            Id = default
+            NewValue = null,
+            Id = default,
+            ChangeType = TokenType.UsernameChange
         };
 
         var token = new RedisConfirmationToken
@@ -922,7 +931,7 @@ public class UserManagerTest
 
         // Assert
         Assert.That(result, Is.Not.Null);
-        Assert.That(result.Password, Is.Not.Null.And.Not.Empty);
+        Assert.That(result.NewValue, Is.Not.Null.And.Not.Empty);
         Assert.That(result.Salt, Is.Not.Null.And.Not.Empty);
     }
 

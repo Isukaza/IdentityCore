@@ -1,8 +1,8 @@
-using Helpers;
 using IdentityCore.DAL.PostgreSQL.Models.cache;
 using IdentityCore.DAL.PostgreSQL.Models.db;
-using IdentityCore.Models.Request;
+using IdentityCore.DAL.PostgreSQL.Models.enums;
 using IdentityCore.Models.Response;
+using RabbitMQ.Messaging.Models;
 
 namespace IdentityCore.Models;
 
@@ -20,30 +20,52 @@ public static class ModelHelper
             Provider = user.Provider
         };
 
-    public static RedisUserUpdate ToRedisUserUpdate(this User user) =>
-        new()
+    public static UserUpdateMessage ToUserUpdateMessage(this RedisUserUpdate redis, User user, string cfmLink)
+    {
+        var userUpdateMessage = new UserUpdateMessage
+        {
+            UserEmail = user.Email,
+            UserName = user.Username,
+            ChangeType = redis.ChangeType,
+            ConfirmationLink = cfmLink
+        };
+
+        if (redis.ChangeType != TokenType.PasswordChange || redis.ChangeType == TokenType.PasswordReset)
+        {
+            userUpdateMessage.NewValue = redis.NewValue;
+            userUpdateMessage.OldValue = redis.ChangeType switch
+            {
+                TokenType.EmailChangeOld or TokenType.EmailChangeNew => user.Email,
+                TokenType.UsernameChange => user.Username,
+                _ => null
+            };
+        }
+        
+        return userUpdateMessage;
+    }
+    
+    public static RedisUserUpdate ToRedisUserUpdate(this User user)
+    {
+        var userUpdateMessage = new RedisUserUpdate
         {
             Id = user.Id,
-            Username = user.Username,
-            Email = user.Email,
+            ChangeType = TokenType.RegistrationConfirmation
         };
-
-    public static RedisUserUpdate ToRedisUserUpdate(this UserUpdateRequest userUpdateData)
+        
+        return userUpdateMessage;
+    }
+    
+    public static UserUpdateMessage ToUserUpdateMessage(this User user, string cfmLink)
     {
-        var redisUserUpdate = new RedisUserUpdate
+        var userUpdateMessage = new UserUpdateMessage
         {
-            Id = userUpdateData.Id,
-            Username = userUpdateData.Username,
-            Email = userUpdateData.Email
+            UserEmail = user.Email,
+            UserName = user.Username,
+            ChangeType = TokenType.RegistrationConfirmation,
+            ConfirmationLink = cfmLink
         };
-
-        if (!string.IsNullOrWhiteSpace(userUpdateData.NewPassword))
-        {
-            redisUserUpdate.Salt = UserHelper.GenerateSalt();
-            redisUserUpdate.Password = UserHelper.GetPasswordHash(userUpdateData.NewPassword, redisUserUpdate.Salt);
-        }
-
-        return redisUserUpdate;
+        
+        return userUpdateMessage;
     }
 
     #endregion

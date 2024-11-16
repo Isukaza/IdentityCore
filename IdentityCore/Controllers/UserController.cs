@@ -2,10 +2,10 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using RabbitMQ.Messaging.Models;
+
 using Helpers;
 using IdentityCore.Configuration;
-using IdentityCore.DAL.PostgreSQL.Models.cache;
-using IdentityCore.DAL.PostgreSQL.Models.cache.cachePrefix;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
 using IdentityCore.DAL.PostgreSQL.Roles;
 using IdentityCore.Managers.Interfaces;
@@ -23,14 +23,17 @@ public class UserController : Controller
     #region C-tor and fields
 
     private readonly IUserManager _userManager;
-    private readonly IMailManager _mailManager;
     private readonly ICfmTokenManager _ctManager;
+    private readonly IMessageSenderManager _messageSenderManager;
 
-    public UserController(IUserManager userManager, IMailManager mailManager, ICfmTokenManager ctManager)
+    public UserController(
+        IUserManager userManager,
+        IMessageSenderManager messageSenderManager,
+        ICfmTokenManager ctManager)
     {
         _userManager = userManager;
-        _mailManager = mailManager;
         _ctManager = ctManager;
+        _messageSenderManager = messageSenderManager;
     }
 
     #endregion
@@ -97,14 +100,15 @@ public class UserController : Controller
         }
 
         var cfmLink = MailConfig.GetConfirmationLink(cfmToken.Value, cfmToken.TokenType);
-        var sendMailError = await _mailManager.SendEmailAsync(user.Email, cfmToken.TokenType, cfmLink, user);
+        var sendMessageError = await _messageSenderManager.SendMessageAsync(user.ToUserUpdateMessage(cfmLink));
 
         var cfmTokenResponse = new ReSendCfmTokenResponse
         {
             UserId = cfmToken.UserId,
             TokenType = cfmToken.TokenType
         };
-        return string.IsNullOrEmpty(sendMailError)
+
+        return string.IsNullOrEmpty(sendMessageError)
             ? await StatusCodes.Status201Created.ResultState("Awaiting confirmation by mail", cfmTokenResponse)
             : await StatusCodes.Status400BadRequest.ResultState("Not send mail");
     }
@@ -225,27 +229,29 @@ public class UserController : Controller
         if (!result.Success)
             return await StatusCodes.Status400BadRequest.ResultState(result.ErrorMessage);
 
-        var tokenType = _ctManager.DetermineTokenType(updateRequest);
-        if (tokenType is TokenType.Unknown || tokenType is TokenType.RoleChange)
+        var redisUserUpdateData = _userManager.CreateUserUpdateEntity(updateRequest, result.Data);
+        if (redisUserUpdateData.ChangeType is TokenType.Unknown)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
 
-        var redisUserUpdateData = updateRequest.ToRedisUserUpdate();
-        var ttl = TokenConfig.GetTtlForTokenType(tokenType);
-        var redisUserUpdate = _userManager.AddUserUpdateDataByTokenType(redisUserUpdateData, tokenType, ttl);
-        if (redisUserUpdate is null)
+        if (redisUserUpdateData.ChangeType is TokenType.RoleChange)
+            return await StatusCodes.Status400BadRequest.ResultState("Cannot request role update");
+
+        if (!_userManager.AddUserUpdateDataToRedis(redisUserUpdateData))
             return await StatusCodes.Status400BadRequest.ResultState("Invalid input data");
 
-        var cfmToken = _ctManager.CreateToken(result.Data.Id, tokenType);
+        var cfmToken = _ctManager.CreateToken(result.Data.Id, redisUserUpdateData.ChangeType);
         var cfmLink = MailConfig.GetConfirmationLink(cfmToken.Value, cfmToken.TokenType);
-        var sendMailError = await _mailManager
-            .SendEmailAsync(result.Data.Email, tokenType, cfmLink, result.Data, redisUserUpdate);
+
+        var sendMessageError = await _messageSenderManager
+            .SendMessageAsync(redisUserUpdateData.ToUserUpdateMessage(result.Data, cfmLink));
 
         var cfmTokenResponse = new ReSendCfmTokenResponse
         {
             UserId = cfmToken.UserId,
             TokenType = cfmToken.TokenType
         };
-        return string.IsNullOrEmpty(sendMailError)
+
+        return string.IsNullOrEmpty(sendMessageError)
             ? await StatusCodes.Status200OK.ResultState("Awaiting confirmation by mail", cfmTokenResponse)
             : await StatusCodes.Status500InternalServerError.ResultState("Failed to send mail");
     }
@@ -280,7 +286,13 @@ public class UserController : Controller
             : await _ctManager.UpdateTokenAsync(existingToken);
 
         var cfmLink = MailConfig.GetConfirmationLink(cfmToken.Value, cfmToken.TokenType);
-        _ = await _mailManager.SendEmailAsync(email, tokenType, cfmLink, user);
+        _ = await _messageSenderManager.SendMessageAsync(new UserUpdateMessage
+        {
+            UserEmail = user.Email,
+            UserName = user.Username,
+            ChangeType = cfmToken.TokenType,
+            ConfirmationLink = cfmLink
+        });
 
         return await StatusCodes.Status200OK.ResultState();
     }

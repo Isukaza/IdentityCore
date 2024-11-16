@@ -8,6 +8,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdentityCore.DAL.PostgreSQL
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdentityCore.Tests", "IdentityCore.Tests\IdentityCore.Tests.csproj", "{0E1F401B-6E94-4DBB-AD3D-2CBE84DF8199}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RabbitMQ.Messaging", "RabbitMQ.Messaging\RabbitMQ.Messaging.csproj", "{F9032669-6380-4942-9F3E-7A623D232F73}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,6 +32,10 @@ Global
 		{0E1F401B-6E94-4DBB-AD3D-2CBE84DF8199}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0E1F401B-6E94-4DBB-AD3D-2CBE84DF8199}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0E1F401B-6E94-4DBB-AD3D-2CBE84DF8199}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F9032669-6380-4942-9F3E-7A623D232F73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9032669-6380-4942-9F3E-7A623D232F73}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F9032669-6380-4942-9F3E-7A623D232F73}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F9032669-6380-4942-9F3E-7A623D232F73}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 	EndGlobalSection
