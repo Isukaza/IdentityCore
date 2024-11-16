@@ -74,7 +74,7 @@ builder.Services.AddSingleton<IRabbitMqConnection>(
     new RabbitMqConnection(
         RabbitMqConfig.Values.Host,
         RabbitMqConfig.Values.Queue,
-        RabbitMqConfig.Values.User,
+        RabbitMqConfig.Values.Username,
         RabbitMqConfig.Values.Password,
         RabbitMqConfig.Values.Port)
 );

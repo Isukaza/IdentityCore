@@ -8,7 +8,7 @@ public static class RabbitMqConfig
         public const string HostKey = GroupName + ":Host";
         public const string QueueKey = GroupName + ":Queue";
         public const string PortKey = GroupName + ":Port";
-        public const string UserKey = GroupName + ":User";
+        public const string UsernameKey = GroupName + ":Username";
         public const string PasswordKey = GroupName + ":Password";
     }
 
@@ -17,7 +17,7 @@ public static class RabbitMqConfig
         public static readonly string Host;
         public static readonly string Queue;
         public static readonly int Port;
-        public static readonly string User;
+        public static readonly string Username;
         public static readonly string Password;
 
         static Values()
@@ -30,7 +30,7 @@ public static class RabbitMqConfig
                 ? port
                 : 5672;
 
-            User = configuration[Keys.UserKey];
+            Username = configuration[Keys.UsernameKey];
             Password = configuration[Keys.PasswordKey];
         }
     }
