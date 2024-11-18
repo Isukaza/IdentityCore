@@ -44,6 +44,7 @@ builder.Configuration
     .AddJsonFile(configFile, optional: false);
 
 JwtConfig.Values.Initialize(builder.Configuration, builder.Environment.IsDevelopment());
+RabbitMqConfig.Values.Initialize(builder.Configuration, builder.Environment.IsDevelopment());
 
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

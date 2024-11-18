@@ -1,3 +1,5 @@
+using Helpers;
+
 namespace IdentityCore.Configuration;
 
 public static class RabbitMqConfig
@@ -14,24 +16,28 @@ public static class RabbitMqConfig
 
     public static class Values
     {
-        public static readonly string Host;
-        public static readonly string Queue;
-        public static readonly int Port;
-        public static readonly string Username;
-        public static readonly string Password;
+        public static string Host { get; private set; }
+        public static string Queue { get; private set; }
+        public static int Port { get; private set; }
+        public static string Username { get; private set; }
+        public static string Password { get; private set; }
 
-        static Values()
+        public static void Initialize(IConfiguration configuration, bool isDevelopment)
         {
-            var configuration = ConfigBase.GetConfiguration();
-            Host = configuration[Keys.HostKey];
-            Queue = configuration[Keys.QueueKey];
+            Host = DataHelper.GetRequiredSetting(configuration[Keys.HostKey], Keys.HostKey);
+            Queue = DataHelper.GetRequiredSetting(configuration[Keys.QueueKey], Keys.QueueKey);
 
-            Port = int.TryParse(configuration[Keys.PortKey], out var port)
-                ? port
-                : 5672;
-
-            Username = configuration[Keys.UsernameKey];
-            Password = configuration[Keys.PasswordKey];
+            Port = DataHelper.GetValidatedPort(configuration[Keys.PortKey], Keys.PortKey);
+            
+            var rawUsername = isDevelopment
+                ? configuration[Keys.UsernameKey]
+                : Environment.GetEnvironmentVariable("RABBITMQ_USER");
+            Username = DataHelper.GetRequiredSetting(rawUsername, Keys.UsernameKey, 3);
+            
+            var rawPassword = isDevelopment
+                ? configuration[Keys.PasswordKey]
+                : Environment.GetEnvironmentVariable("RABBITMQ_PASS");
+            Password = DataHelper.GetRequiredSetting(rawPassword, Keys.PasswordKey, 32);
         }
     }
 }

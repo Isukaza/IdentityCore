@@ -10,6 +10,8 @@ public static class DataHelper
 
     private const int Sha512ByteSize = 64;
     private const int MaxLength = 255;
+    private const int MinPort = 1;
+    private const int MaxPort = 65535;
 
     #region GET
 
@@ -129,6 +131,24 @@ public static class DataHelper
             throw new ArgumentException($"{settingName} should be between {min} and {max} minutes");
 
         return TimeSpan.FromMinutes(value);
+    }
+    
+    /// <summary>
+    /// Validates and converts a string configuration value to an integer port, within specified bounds.
+    /// </summary>
+    /// <param name="valueFromConfiguration">The configuration value to validate.</param>
+    /// <param name="settingName">A friendly name for the setting (used in exception messages).</param>
+    /// <returns>The validated port value.</returns>
+    /// <exception cref="ArgumentException">Thrown if the value is invalid, out of bounds, or missing.</exception>
+    public static int GetValidatedPort(string? valueFromConfiguration, string settingName)
+    {
+        if (!int.TryParse(valueFromConfiguration, out var value))
+            throw new ArgumentException($"{settingName} is invalid or missing");
+
+        if (value < MinPort || value > MaxPort)
+            throw new ArgumentException($"{settingName} should be between {MinPort} and {MaxPort}");
+
+        return value;
     }
 
     #endregion
