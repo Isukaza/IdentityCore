@@ -25,8 +25,8 @@ public static class JwtConfig
 
         public static void Initialize(IConfiguration configuration, bool isDevelopment)
         {
-            Issuer = DataHelper.GetRequiredSetting(configuration[Keys.IssuerKey], Keys.IssuerKey);
-            Audience = DataHelper.GetRequiredSetting(configuration[Keys.AudienceKey], Keys.AudienceKey);
+            Issuer = DataHelper.GetRequiredString(configuration[Keys.IssuerKey], Keys.IssuerKey);
+            Audience = DataHelper.GetRequiredString(configuration[Keys.AudienceKey], Keys.AudienceKey);
             
             Expires = DataHelper.GetValidatedTimeSpan(configuration[Keys.ExpiresKey], Keys.ExpiresKey, 1, 120);
 
@@ -34,7 +34,7 @@ public static class JwtConfig
                 ? configuration[Keys.KeyKey]
                 : Environment.GetEnvironmentVariable("JWT_KEY");
 
-            var key = DataHelper.GetRequiredSetting(rawJwtKey, Keys.KeyKey, 32);
+            var key = DataHelper.GetRequiredString(rawJwtKey, Keys.KeyKey, 32);
 
             SymmetricSecurityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
             SigningCredentials = new SigningCredentials(SymmetricSecurityKey, SecurityAlgorithms.HmacSha256);

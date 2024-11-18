@@ -24,20 +24,20 @@ public static class RabbitMqConfig
 
         public static void Initialize(IConfiguration configuration, bool isDevelopment)
         {
-            Host = DataHelper.GetRequiredSetting(configuration[Keys.HostKey], Keys.HostKey);
-            Queue = DataHelper.GetRequiredSetting(configuration[Keys.QueueKey], Keys.QueueKey);
+            Host = DataHelper.GetRequiredString(configuration[Keys.HostKey], Keys.HostKey);
+            Queue = DataHelper.GetRequiredString(configuration[Keys.QueueKey], Keys.QueueKey);
 
             Port = DataHelper.GetRequiredInt(configuration[Keys.PortKey], Keys.PortKey, 1, 65535);
 
             var rawUsername = isDevelopment
                 ? configuration[Keys.UsernameKey]
                 : Environment.GetEnvironmentVariable("RABBITMQ_USER");
-            Username = DataHelper.GetRequiredSetting(rawUsername, Keys.UsernameKey, 3);
+            Username = DataHelper.GetRequiredString(rawUsername, Keys.UsernameKey, 3);
 
             var rawPassword = isDevelopment
                 ? configuration[Keys.PasswordKey]
                 : Environment.GetEnvironmentVariable("RABBITMQ_PASS");
-            Password = DataHelper.GetRequiredSetting(rawPassword, Keys.PasswordKey, 32);
+            Password = DataHelper.GetRequiredString(rawPassword, Keys.PasswordKey, 32);
         }
     }
 }

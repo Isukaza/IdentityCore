@@ -69,7 +69,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddDbContext<IdentityCoreDbContext>(options =>
 {
-    var connectionString = DataHelper.GetRequiredSetting(
+    var connectionString = DataHelper.GetRequiredString(
         builder.Configuration.GetConnectionString("PostgreSQL"),
         "ConnectionStrings:PostgreSQL");
     

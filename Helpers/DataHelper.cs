@@ -123,7 +123,7 @@ public static class DataHelper
     /// <param name="minLength">Optional minimum length for the string.</param>
     /// <returns>The validated configuration value.</returns>
     /// <exception cref="ArgumentException">Thrown if the value is missing, invalid, or violates length constraints.</exception>
-    public static string GetRequiredSetting(string? valueFromConfiguration, string settingName, int? minLength = null)
+    public static string GetRequiredString(string? valueFromConfiguration, string settingName, int? minLength = null)
     {
         if (string.IsNullOrWhiteSpace(valueFromConfiguration))
             throw new ArgumentException($"{settingName} is missing");
@@ -164,14 +164,15 @@ public static class DataHelper
     }
 
     /// <summary>
-    /// Validates and converts a string configuration value to a TimeSpan, within specified bounds.
+    /// Validates and converts a string configuration value to a TimeSpan, ensuring the value is within the specified bounds (in minutes).
+    /// The configuration value can be either a plain integer representing minutes or a valid TimeSpan string.
     /// </summary>
-    /// <param name="valueFromConfiguration">The configuration value to validate.</param>
+    /// <param name="valueFromConfiguration">The configuration value to validate, which can either be a string representing minutes or a TimeSpan string.</param>
     /// <param name="settingName">A friendly name for the setting (used in exception messages).</param>
-    /// <param name="min">The minimum allowed value in minutes.</param>
-    /// <param name="max">The maximum allowed value in minutes.</param>
-    /// <returns>A TimeSpan representing the validated value.</returns>
-    /// <exception cref="ArgumentException">Thrown if the value is missing or out of bounds.</exception>
+    /// <param name="min">The minimum allowed value in minutes. The input value will be validated against this minimum.</param>
+    /// <param name="max">The maximum allowed value in minutes. The input value will be validated against this maximum.</param>
+    /// <returns>A TimeSpan representing the validated value, which is within the specified range in minutes.</returns>
+    /// <exception cref="ArgumentException">Thrown if the value is missing, invalid, or out of bounds (not within the specified range in minutes).</exception>
     public static TimeSpan GetValidatedTimeSpan(string? valueFromConfiguration, string settingName, int min, int max)
     {
         if (string.IsNullOrWhiteSpace(valueFromConfiguration))

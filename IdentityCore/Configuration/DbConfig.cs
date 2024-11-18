@@ -10,7 +10,7 @@ public static class DbConfig
     public static string GetPostgreSqlUsernameFromEnv()
     {
         var username = Environment.GetEnvironmentVariable("POSTGRES_USER_IC");
-        return DataHelper.GetRequiredSetting(username, "ENV POSTGRES_USER_IC", 3);
+        return DataHelper.GetRequiredString(username, "ENV POSTGRES_USER_IC", 3);
     }
 
     /// <summary>
@@ -19,6 +19,6 @@ public static class DbConfig
     public static string GetPostgreSqlPasswordFromEnv()
     {
         var password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD_IC");
-        return DataHelper.GetRequiredSetting(password, "ENV POSTGRES_PASSWORD_IC", 32);
+        return DataHelper.GetRequiredString(password, "ENV POSTGRES_PASSWORD_IC", 32);
     }
 }

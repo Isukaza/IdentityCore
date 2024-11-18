@@ -23,15 +23,15 @@ public static class GoogleConfig
 
         public static void Initialize(IConfiguration configuration, bool isDevelopment)
         {
-            ClientId = DataHelper.GetRequiredSetting(configuration[Keys.ClientIdKey], Keys.ClientIdKey);
-            RedirectUri = DataHelper.GetRequiredSetting(configuration[Keys.RedirectUriKey], Keys.RedirectUriKey);
-            Scope = DataHelper.GetRequiredSetting(configuration[Keys.ScopeKey], Keys.ScopeKey);
+            ClientId = DataHelper.GetRequiredString(configuration[Keys.ClientIdKey], Keys.ClientIdKey);
+            RedirectUri = DataHelper.GetRequiredString(configuration[Keys.RedirectUriKey], Keys.RedirectUriKey);
+            Scope = DataHelper.GetRequiredString(configuration[Keys.ScopeKey], Keys.ScopeKey);
             
             var rawClientSecret = isDevelopment
                 ? configuration[Keys.ClientSecretKey]
                 : Environment.GetEnvironmentVariable("GOOGLE_AUTH_ClientSecret");
             
-            ClientSecret = DataHelper.GetRequiredSetting(rawClientSecret, Keys.ClientSecretKey);
+            ClientSecret = DataHelper.GetRequiredString(rawClientSecret, Keys.ClientSecretKey);
         }
     }
 }
