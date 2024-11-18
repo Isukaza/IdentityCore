@@ -86,11 +86,11 @@ public class AuthenticationManager : IAuthenticationManager
         };
 
         var jwt = new JwtSecurityToken(
-            issuer: Jwt.Configs.Issuer,
-            audience: Jwt.Configs.Audience,
+            issuer: JwtConfig.Values.Issuer,
+            audience: JwtConfig.Values.Audience,
             claims: claims,
-            expires: DateTime.UtcNow.Add(Jwt.Configs.Expires),
-            signingCredentials: new SigningCredentials(Jwt.Configs.Key, SecurityAlgorithms.HmacSha256));
+            expires: DateTime.UtcNow.Add(JwtConfig.Values.Expires),
+            signingCredentials: new SigningCredentials(JwtConfig.Values.Key, SecurityAlgorithms.HmacSha256));
 
         return new JwtSecurityTokenHandler().WriteToken(jwt);
     }

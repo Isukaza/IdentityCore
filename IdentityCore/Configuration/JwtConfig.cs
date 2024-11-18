@@ -3,7 +3,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace IdentityCore.Configuration;
 
-public static class Jwt
+public static class JwtConfig
 {
     private static class Keys
     {
@@ -14,14 +14,14 @@ public static class Jwt
         public const string KeyKey = GroupName + ":Key";
     }
 
-    public static class Configs
+    public static class Values
     {
         public static readonly string Issuer;
         public static readonly string Audience;
         public static readonly TimeSpan Expires;
         public static readonly SymmetricSecurityKey Key;
 
-        static Configs()
+        static Values()
         {
             var configuration = ConfigBase.GetConfiguration();
             Issuer = configuration[Keys.IssuerKey];
