@@ -1,4 +1,5 @@
 using System.Net;
+using Helpers;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
 
 namespace IdentityCore.Configuration;
@@ -15,25 +16,30 @@ public static class MailConfig
 
     public static class Values
     {
-        public static readonly int MaxAttemptsConfirmationResend;
-        public static readonly TimeSpan NextAttemptAvailableAfter;
-        public static readonly TimeSpan MinIntervalBetweenAttempts;
+        public static int MaxAttemptsConfirmationResend { get; private set; }
+        public static TimeSpan NextAttemptAvailableAfter { get; private set; }
+        public static TimeSpan MinIntervalBetweenAttempts { get; private set; }
 
-        static Values()
+
+        public static void Initialize(IConfiguration configuration)
         {
-            var configuration = ConfigBase.GetConfiguration();
-            MaxAttemptsConfirmationResend =
-                int.TryParse(configuration[Keys.MaxAttemptsConfirmationResendKey], out var maxAttempts)
-                    ? maxAttempts
-                    : 3;
-            NextAttemptAvailableAfter =
-                TimeSpan.TryParse(configuration[Keys.NextAttemptAvailableAfterKey], out var nextAttempt)
-                    ? nextAttempt
-                    : TimeSpan.FromMinutes(10);
-            MinIntervalBetweenAttempts =
-                TimeSpan.TryParse(configuration[Keys.MinIntervalBetweenAttemptsKey], out var minInterval)
-                    ? minInterval
-                    : TimeSpan.FromMinutes(1);
+            MaxAttemptsConfirmationResend = DataHelper.GetRequiredInt(
+                configuration[Keys.MaxAttemptsConfirmationResendKey],
+                Keys.MaxAttemptsConfirmationResendKey,
+                1,
+                10);
+
+            NextAttemptAvailableAfter = DataHelper.GetValidatedTimeSpan(
+                configuration[Keys.NextAttemptAvailableAfterKey],
+                Keys.NextAttemptAvailableAfterKey,
+                1,
+                1440);
+
+            MinIntervalBetweenAttempts = DataHelper.GetValidatedTimeSpan(
+                configuration[Keys.MinIntervalBetweenAttemptsKey],
+                Keys.MinIntervalBetweenAttemptsKey,
+                1,
+                1440);
         }
     }
 

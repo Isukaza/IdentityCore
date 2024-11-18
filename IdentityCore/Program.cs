@@ -43,6 +43,9 @@ builder.Configuration
     .SetBasePath(Directory.GetCurrentDirectory())
     .AddJsonFile(configFile, optional: false);
 
+HostConfig.Values.Initialize(builder.Configuration);  
+MailConfig.Values.Initialize(builder.Configuration);  
+TokenConfig.Values.Initialize(builder.Configuration);  
 GoogleConfig.Values.Initialize(builder.Configuration, builder.Environment.IsDevelopment());
 JwtConfig.Values.Initialize(builder.Configuration, builder.Environment.IsDevelopment());
 RabbitMqConfig.Values.Initialize(builder.Configuration, builder.Environment.IsDevelopment());

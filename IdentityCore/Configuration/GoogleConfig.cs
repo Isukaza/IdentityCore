@@ -31,7 +31,7 @@ public static class GoogleConfig
                 ? configuration[Keys.ClientSecretKey]
                 : Environment.GetEnvironmentVariable("GOOGLE_AUTH_ClientSecret");
             
-            ClientSecret = DataHelper.GetRequiredSetting(rawClientSecret, Keys.ClientSecretKey);;
+            ClientSecret = DataHelper.GetRequiredSetting(rawClientSecret, Keys.ClientSecretKey);
         }
     }
 }

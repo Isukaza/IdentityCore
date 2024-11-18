@@ -10,8 +10,6 @@ public static class DataHelper
 
     private const int Sha512ByteSize = 64;
     private const int MaxLength = 255;
-    private const int MinPort = 1;
-    private const int MaxPort = 65535;
 
     #region GET
 
@@ -92,6 +90,32 @@ public static class DataHelper
     }
 
     /// <summary>
+    /// Validates and retrieves a required relative path.
+    /// </summary>
+    /// <param name="pathFromConfiguration">The relative path to validate.</param>
+    /// <param name="settingName">A friendly name for the setting (used in exception messages).</param>
+    /// <returns>The validated relative path.</returns>
+    /// <exception cref="ArgumentException">Thrown if the path is missing or invalid.</exception>
+    public static string GetRequiredPath(string? pathFromConfiguration, string settingName)
+    {
+        if (string.IsNullOrWhiteSpace(pathFromConfiguration))
+            throw new ArgumentException($"{settingName} is missing");
+
+        if (!pathFromConfiguration.StartsWith('/'))
+            throw new ArgumentException(
+                $"{settingName} is invalid. It must be a valid relative path starting with '/'.");
+
+        if (pathFromConfiguration.Contains(".."))
+            throw new ArgumentException(
+                $"{settingName} is invalid. The relative path cannot contain '..' to navigate outside the root.");
+
+        if (pathFromConfiguration.Any(c => !Uri.IsWellFormedUriString(c.ToString(), UriKind.Relative)))
+            throw new ArgumentException($"{settingName} is invalid. The relative path contains invalid characters.");
+
+        return pathFromConfiguration;
+    }
+
+    /// <summary>
     /// Validates and retrieves a required string setting, with optional length validation.
     /// </summary>
     /// <param name="valueFromConfiguration">The configuration value to validate.</param>
@@ -114,6 +138,32 @@ public static class DataHelper
     }
 
     /// <summary>
+    /// Validates and retrieves a required integer setting within a specified range.
+    /// </summary>
+    /// <param name="valueFromConfiguration">The string value to convert to an integer.</param>
+    /// <param name="settingName">A friendly name for the setting (used in exception messages).</param>
+    /// <param name="min">The minimum acceptable value for the setting.</param>
+    /// <param name="max">The maximum acceptable value for the setting.</param>
+    /// <returns>The validated integer value.</returns>
+    /// <exception cref="ArgumentException">Thrown if the value is missing, invalid, or out of range.</exception>
+    public static int GetRequiredInt(string? valueFromConfiguration, string settingName, int min, int max)
+    {
+        if (string.IsNullOrWhiteSpace(valueFromConfiguration))
+            throw new ArgumentException($"{settingName} is missing");
+
+        if (!int.TryParse(valueFromConfiguration, out var result))
+            throw new ArgumentException($"{settingName} is invalid. It must be a valid integer.");
+
+        if (result < min)
+            throw new ArgumentException($"{settingName} is too low. The minimum value is {min}.");
+
+        if (result > max)
+            throw new ArgumentException($"{settingName} is too high. The maximum value is {max}.");
+
+        return result;
+    }
+
+    /// <summary>
     /// Validates and converts a string configuration value to a TimeSpan, within specified bounds.
     /// </summary>
     /// <param name="valueFromConfiguration">The configuration value to validate.</param>
@@ -124,31 +174,48 @@ public static class DataHelper
     /// <exception cref="ArgumentException">Thrown if the value is missing or out of bounds.</exception>
     public static TimeSpan GetValidatedTimeSpan(string? valueFromConfiguration, string settingName, int min, int max)
     {
-        if (!int.TryParse(valueFromConfiguration, out var value))
-            throw new ArgumentException($"{settingName} is invalid or missing");
+        if (string.IsNullOrWhiteSpace(valueFromConfiguration))
+            throw new ArgumentException($"{settingName} is missing");
 
-        if (value < min || value > max)
-            throw new ArgumentException($"{settingName} should be between {min} and {max} minutes");
+        if (int.TryParse(valueFromConfiguration, out var value))
+        {
+            if (value < min || value > max)
+                throw new ArgumentException($"{settingName} should be between {min} and {max} minutes");
 
-        return TimeSpan.FromMinutes(value);
+            return TimeSpan.FromMinutes(value);
+        }
+
+        if (TimeSpan.TryParse(valueFromConfiguration, out var timeSpan))
+        {
+            var minutes = (int)Math.Ceiling(timeSpan.TotalMinutes);
+            if (minutes < min || minutes > max)
+                throw new ArgumentException($"{settingName} should be between {min} and {max} minutes");
+
+            return timeSpan;
+        }
+
+        throw new ArgumentException($"{settingName} is invalid or missing");
     }
-    
+
     /// <summary>
-    /// Validates and converts a string configuration value to an integer port, within specified bounds.
+    /// Validates and retrieves a required URL setting.
     /// </summary>
-    /// <param name="valueFromConfiguration">The configuration value to validate.</param>
+    /// <param name="urlFromConfiguration">The URL value to validate.</param>
     /// <param name="settingName">A friendly name for the setting (used in exception messages).</param>
-    /// <returns>The validated port value.</returns>
-    /// <exception cref="ArgumentException">Thrown if the value is invalid, out of bounds, or missing.</exception>
-    public static int GetValidatedPort(string? valueFromConfiguration, string settingName)
+    /// <returns>The validated URL.</returns>
+    /// <exception cref="ArgumentException">Thrown if the URL is missing or invalid.</exception>
+    public static string GetRequiredUrl(string? urlFromConfiguration, string settingName)
     {
-        if (!int.TryParse(valueFromConfiguration, out var value))
-            throw new ArgumentException($"{settingName} is invalid or missing");
+        if (string.IsNullOrWhiteSpace(urlFromConfiguration))
+            throw new ArgumentException($"{settingName} is missing");
 
-        if (value < MinPort || value > MaxPort)
-            throw new ArgumentException($"{settingName} should be between {MinPort} and {MaxPort}");
+        var isValidUrl = Uri.TryCreate(urlFromConfiguration, UriKind.Absolute, out var uriResult)
+                         && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps);
 
-        return value;
+        if (!isValidUrl)
+            throw new ArgumentException($"{settingName} is invalid. It must be a valid HTTP or HTTPS URL.");
+
+        return urlFromConfiguration;
     }
 
     #endregion
