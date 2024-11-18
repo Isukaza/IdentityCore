@@ -1,3 +1,5 @@
+using Helpers;
+
 namespace IdentityCore.Configuration;
 
 public static class GoogleConfig
@@ -13,18 +15,23 @@ public static class GoogleConfig
 
     public static class Values
     {
-        public static readonly string ClientId;
-        public static readonly string ClientSecret;
-        public static readonly string RedirectUri;
-        public static readonly string Scope;
+        public static string ClientId { get; private set; }
+        public static string ClientSecret { get; private set; }
+        public static string RedirectUri { get; private set; }
+        public static string Scope { get; private set; }
 
-        static Values()
+
+        public static void Initialize(IConfiguration configuration, bool isDevelopment)
         {
-            var configuration = ConfigBase.GetConfiguration();
-            ClientId = configuration[Keys.ClientIdKey];
-            ClientSecret = configuration[Keys.ClientSecretKey];
-            RedirectUri = configuration[Keys.RedirectUriKey];
-            Scope = configuration[Keys.ScopeKey];
+            ClientId = DataHelper.GetRequiredSetting(configuration[Keys.ClientIdKey], Keys.ClientIdKey);
+            RedirectUri = DataHelper.GetRequiredSetting(configuration[Keys.RedirectUriKey], Keys.RedirectUriKey);
+            Scope = DataHelper.GetRequiredSetting(configuration[Keys.ScopeKey], Keys.ScopeKey);
+            
+            var rawClientSecret = isDevelopment
+                ? configuration[Keys.ClientSecretKey]
+                : Environment.GetEnvironmentVariable("GOOGLE_AUTH_ClientSecret");
+            
+            ClientSecret = DataHelper.GetRequiredSetting(rawClientSecret, Keys.ClientSecretKey);;
         }
     }
 }

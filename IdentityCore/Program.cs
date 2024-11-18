@@ -43,6 +43,7 @@ builder.Configuration
     .SetBasePath(Directory.GetCurrentDirectory())
     .AddJsonFile(configFile, optional: false);
 
+GoogleConfig.Values.Initialize(builder.Configuration, builder.Environment.IsDevelopment());
 JwtConfig.Values.Initialize(builder.Configuration, builder.Environment.IsDevelopment());
 RabbitMqConfig.Values.Initialize(builder.Configuration, builder.Environment.IsDevelopment());
 
