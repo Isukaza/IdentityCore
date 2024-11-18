@@ -23,6 +23,12 @@ using IdentityCore.Managers.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var configFile = DataHelper.GetConfigurationFileForMode(builder.Environment.IsDevelopment());
+builder.Configuration
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile(configFile, optional: false);
+
+builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging")); 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
@@ -38,10 +44,20 @@ builder.Services.AddHttpLogging(logging =>
     logging.CombineLogs = true;
 });
 
-var configFile = DataHelper.GetConfigurationFileForMode(builder.Environment.IsDevelopment());
-builder.Configuration
-    .SetBasePath(Directory.GetCurrentDirectory())
-    .AddJsonFile(configFile, optional: false);
+#if DEBUG
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigin",
+        policyBuilder =>
+        {
+            policyBuilder.AllowAnyOrigin()
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
+});
+
+#endif
 
 HostConfig.Values.Initialize(builder.Configuration);  
 MailConfig.Values.Initialize(builder.Configuration);  
@@ -170,6 +186,12 @@ if (builder.Environment.IsDevelopment())
 
 var app = builder.Build();
 
+#if DEBUG
+
+app.UseCors("AllowSpecificOrigin");
+
+#endif
+
 app.UseHttpLogging();
 
 if (app.Environment.IsDevelopment())
@@ -195,3 +217,5 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+Console.WriteLine("Press any key to exit...");
