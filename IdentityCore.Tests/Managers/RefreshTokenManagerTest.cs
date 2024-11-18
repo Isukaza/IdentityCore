@@ -164,7 +164,7 @@ public class RefreshTokenManagerTest
 
         _refTokenDbRepo
             .Setup(repo => repo.GetCountUserTokensAsync(user.Id))
-            .ReturnsAsync(RefToken.Configs.MaxSessions);
+            .ReturnsAsync(RefTokenConfig.Values.MaxSessions);
 
         _refTokenDbRepo
             .Setup(repo => repo.DeleteOldestSessionAsync(user.Id))

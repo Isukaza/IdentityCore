@@ -18,7 +18,8 @@ public static class RefTokenConfig
 
         public static void Initialize(IConfiguration configuration)
         {
-            Expires = DataHelper.GetValidatedTimeSpan(configuration[Keys.ExpiresKey], Keys.ExpiresKey, 1, 180);
+            Expires = TimeSpan.FromDays(
+                DataHelper.GetRequiredInt(configuration[Keys.ExpiresKey], Keys.ExpiresKey, 1, 180));
             MaxSessions = DataHelper.GetRequiredInt(configuration[Keys.MaxSessionsKey], Keys.MaxSessionsKey, 1, 15);
         }
     }

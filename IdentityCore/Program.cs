@@ -45,6 +45,7 @@ builder.Configuration
 
 HostConfig.Values.Initialize(builder.Configuration);  
 MailConfig.Values.Initialize(builder.Configuration);  
+RefTokenConfig.Values.Initialize(builder.Configuration);  
 TokenConfig.Values.Initialize(builder.Configuration);  
 GoogleConfig.Values.Initialize(builder.Configuration, builder.Environment.IsDevelopment());
 JwtConfig.Values.Initialize(builder.Configuration, builder.Environment.IsDevelopment());
