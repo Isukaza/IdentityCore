@@ -90,7 +90,7 @@ public class AuthenticationManager : IAuthenticationManager
             audience: JwtConfig.Values.Audience,
             claims: claims,
             expires: DateTime.UtcNow.Add(JwtConfig.Values.Expires),
-            signingCredentials: new SigningCredentials(JwtConfig.Values.Key, SecurityAlgorithms.HmacSha256));
+            signingCredentials: JwtConfig.Values.SigningCredentials);
 
         return new JwtSecurityTokenHandler().WriteToken(jwt);
     }

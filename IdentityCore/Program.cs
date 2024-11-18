@@ -9,6 +9,7 @@ using Microsoft.OpenApi.Models;
 using RabbitMQ.Messaging;
 using StackExchange.Redis;
 
+using Helpers;
 using IdentityCore.Configuration;
 using IdentityCore.DAL.PostgreSQL;
 using IdentityCore.DAL.PostgreSQL.Repositories.Base;
@@ -37,6 +38,13 @@ builder.Services.AddHttpLogging(logging =>
     logging.CombineLogs = true;
 });
 
+var configFile = DataHelper.GetConfigurationFileForMode(builder.Environment.IsDevelopment());
+builder.Configuration
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile(configFile, optional: false);
+
+JwtConfig.Values.Initialize(builder.Configuration, builder.Environment.IsDevelopment());
+
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -44,11 +52,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = Jwt.Configs.Issuer,
+            ValidIssuer = JwtConfig.Values.Issuer,
             ValidateAudience = true,
-            ValidAudience = Jwt.Configs.Audience,
+            ValidAudience = JwtConfig.Values.Audience,
             ValidateLifetime = true,
-            IssuerSigningKey = Jwt.Configs.Key,
+            IssuerSigningKey = JwtConfig.Values.SymmetricSecurityKey,
             ValidateIssuerSigningKey = true,
         };
     });
