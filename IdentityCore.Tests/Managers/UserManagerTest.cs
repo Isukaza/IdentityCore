@@ -3,17 +3,19 @@ using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
-using Helpers;
-using IdentityCore.Configuration;
 using IdentityCore.DAL.PostgreSQL.Models.cache;
 using IdentityCore.DAL.PostgreSQL.Models.db;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
-using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.cache;
-using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.db;
 using IdentityCore.DAL.PostgreSQL.Roles;
-using IdentityCore.Managers;
 using IdentityCore.Models.Request;
 
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.cache;
+using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.db;
+
+using Helpers;
+using IdentityCore.Managers;
+
+using IdentityCore.Tests.Mocks;
 using Moq;
 using NUnit.Framework;
 
@@ -31,7 +33,7 @@ public class UserManagerTest
     public void SetUp()
     {
         var mockConfiguration = Mocks.MockFactory.GetMockConfiguration();
-        ConfigBase.SetConfiguration(mockConfiguration);
+        MockSettings.InitializeAllConfigurations(mockConfiguration);
 
         _mockUserDbRepo = new Mock<IUserDbRepository>();
         _mockUserCacheRepo = new Mock<IUserCacheRepository>();

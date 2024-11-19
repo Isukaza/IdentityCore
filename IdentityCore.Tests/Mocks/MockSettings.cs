@@ -1,6 +1,9 @@
 using System;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+
+using IdentityCore.Configuration;
 
 namespace IdentityCore.Tests.Mocks;
 
@@ -20,5 +23,18 @@ public static class MockSettings
         };
 
         return jwtBearerOptions;
+    }
+    
+    public static void InitializeAllConfigurations(IConfigurationRoot mockConfiguration)
+    {
+        ConfigBase.SetConfiguration(mockConfiguration);
+   
+        HostConfig.Values.Initialize(mockConfiguration);
+        MailConfig.Values.Initialize(mockConfiguration);
+        RefTokenConfig.Values.Initialize(mockConfiguration);
+        TokenConfig.Values.Initialize(mockConfiguration);
+        GoogleConfig.Values.Initialize(mockConfiguration, true);
+        JwtConfig.Values.Initialize(mockConfiguration, true);
+        RabbitMqConfig.Values.Initialize(mockConfiguration, true);
     }
 }

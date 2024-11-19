@@ -7,9 +7,10 @@ using IdentityCore.DAL.PostgreSQL.Models.cache;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.cache;
 using IdentityCore.DAL.PostgreSQL.Roles;
-using IdentityCore.Managers;
 using IdentityCore.Models.Request;
+using IdentityCore.Managers;
 
+using IdentityCore.Tests.Mocks;
 using Moq;
 using NUnit.Framework;
 
@@ -25,7 +26,7 @@ public class CfmTokenManagerTests
     public void SetUp()
     {
         var mockConfiguration = Mocks.MockFactory.GetMockConfiguration();
-        ConfigBase.SetConfiguration(mockConfiguration);
+        MockSettings.InitializeAllConfigurations(mockConfiguration);
 
         _mockCacheRepo = new Mock<ICfmTokenCacheRepository>();
         _tokenManager = new CfmTokenManager(_mockCacheRepo.Object);

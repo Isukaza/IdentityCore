@@ -1,13 +1,14 @@
 using System;
 using System.Threading.Tasks;
 
-using IdentityCore.Configuration;
 using IdentityCore.DAL.PostgreSQL.Models.db;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.db;
 using IdentityCore.DAL.PostgreSQL.Roles;
+
 using IdentityCore.Managers;
 using IdentityCore.Managers.Interfaces;
 
+using IdentityCore.Tests.Mocks;
 using Moq;
 using NUnit.Framework;
 
@@ -23,8 +24,8 @@ public class AuthenticationManagerTest
     public void SetUp()
     {
         var mockConfiguration = Mocks.MockFactory.GetMockConfiguration();
-        ConfigBase.SetConfiguration(mockConfiguration);
-
+        MockSettings.InitializeAllConfigurations(mockConfiguration);
+        
         _refTokenManager = new Mock<IRefreshTokenManager>();
         _refTokenDbRepo = new Mock<IRefreshTokenDbRepository>();
 
