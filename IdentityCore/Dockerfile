@@ -5,6 +5,7 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 COPY ["../Helpers/Helpers.csproj", "Helpers/"]
+COPY ["../RabbitMQ.Messaging/RabbitMQ.Messaging.csproj", "RabbitMQ.Messaging/"]
 COPY ["../IdentityCore.DAL.PostgreSQL/IdentityCore.DAL.PostgreSQL.csproj", "IdentityCore.DAL.PostgreSQL/"]
 COPY ["../IdentityCore/IdentityCore.csproj", "IdentityCore/"]
 
