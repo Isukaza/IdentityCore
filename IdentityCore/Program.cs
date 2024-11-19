@@ -9,6 +9,7 @@ using Microsoft.OpenApi.Models;
 using RabbitMQ.Messaging;
 using StackExchange.Redis;
 
+using Helpers;
 using IdentityCore.Configuration;
 using IdentityCore.DAL.PostgreSQL;
 using IdentityCore.DAL.PostgreSQL.Repositories.Base;
@@ -22,6 +23,12 @@ using IdentityCore.Managers.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var configFile = DataHelper.GetConfigurationFileForMode(builder.Environment.IsDevelopment());
+builder.Configuration
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile(configFile, optional: false);
+
+builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging")); 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
@@ -37,6 +44,29 @@ builder.Services.AddHttpLogging(logging =>
     logging.CombineLogs = true;
 });
 
+#if DEBUG
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigin",
+        policyBuilder =>
+        {
+            policyBuilder.AllowAnyOrigin()
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
+});
+
+#endif
+
+HostConfig.Values.Initialize(builder.Configuration);  
+MailConfig.Values.Initialize(builder.Configuration);  
+RefTokenConfig.Values.Initialize(builder.Configuration);  
+TokenConfig.Values.Initialize(builder.Configuration);  
+GoogleConfig.Values.Initialize(builder.Configuration, builder.Environment.IsDevelopment());
+JwtConfig.Values.Initialize(builder.Configuration, builder.Environment.IsDevelopment());
+RabbitMqConfig.Values.Initialize(builder.Configuration, builder.Environment.IsDevelopment());
+
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -44,18 +74,26 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = Jwt.Configs.Issuer,
+            ValidIssuer = JwtConfig.Values.Issuer,
             ValidateAudience = true,
-            ValidAudience = Jwt.Configs.Audience,
+            ValidAudience = JwtConfig.Values.Audience,
             ValidateLifetime = true,
-            IssuerSigningKey = Jwt.Configs.Key,
+            IssuerSigningKey = JwtConfig.Values.SymmetricSecurityKey,
             ValidateIssuerSigningKey = true,
         };
     });
 
 builder.Services.AddDbContext<IdentityCoreDbContext>(options =>
 {
-    var connectionString = builder.Configuration.GetConnectionString("PostgreSQL");
+    var connectionString = DataHelper.GetRequiredString(
+        builder.Configuration.GetConnectionString("PostgreSQL"),
+        "ConnectionStrings:PostgreSQL");
+    
+    if (!builder.Environment.IsDevelopment())
+    {
+        connectionString += $"Username={DbConfig.GetPostgreSqlUsernameFromEnv()};";
+        connectionString += $"Password={DbConfig.GetPostgreSqlPasswordFromEnv()}";
+    }
     options.UseNpgsql(connectionString);
 });
 
@@ -148,6 +186,12 @@ if (builder.Environment.IsDevelopment())
 
 var app = builder.Build();
 
+#if DEBUG
+
+app.UseCors("AllowSpecificOrigin");
+
+#endif
+
 app.UseHttpLogging();
 
 if (app.Environment.IsDevelopment())
@@ -173,3 +217,5 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+Console.WriteLine("Press any key to exit...");

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Security.Claims;
+
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -10,14 +11,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 
 using IdentityCore.DAL.PostgreSQL;
+using IdentityCore.DAL.PostgreSQL.Models.db;
 using IdentityCore.DAL.PostgreSQL.Repositories.Base;
 using IdentityCore.DAL.PostgreSQL.Repositories.cache;
 using IdentityCore.DAL.PostgreSQL.Repositories.db;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.Base;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.cache;
 using IdentityCore.DAL.PostgreSQL.Repositories.Interfaces.db;
-using IdentityCore.DAL.PostgreSQL.Models.db;
 using IdentityCore.DAL.PostgreSQL.Roles;
+
 using IdentityCore.Managers;
 using IdentityCore.Managers.Interfaces;
 
@@ -131,7 +133,7 @@ public static class MockFactory
         const string hostGroupName = "Host";
         mockConfiguration
             .Setup(c => c[$"{hostGroupName}:URL"])
-            .Returns("https://localhost:7109");
+            .Returns("https://localhost:7433");
         mockConfiguration
             .Setup(c => c[$"{hostGroupName}:RegistrationConfirmationPath"])
             .Returns("/User/cfm-reg-token");
@@ -148,7 +150,7 @@ public static class MockFactory
             .Returns("AuthOptions.AUDIENCE");
         mockConfiguration
             .Setup(c => c[$"{jwtGroupName}:Expires"])
-            .Returns("512");
+            .Returns("120");
         mockConfiguration
             .Setup(c => c[$"{jwtGroupName}:Key"])
             .Returns("VVY$%V#v3vt4q4tB$%QY$%ny45nwb2qv4y34uy45u");
@@ -177,6 +179,9 @@ public static class MockFactory
         mockConfiguration
             .Setup(c => c[$"{tokenConfigGroupName}:TTL:UsernameChange"])
             .Returns("00:15:00");
+        mockConfiguration
+            .Setup(c => c[$"{tokenConfigGroupName}:TTL:PasswordReset"])
+            .Returns("00:15:00");
 
         const string mailGroupName = "Mail";
         mockConfiguration
@@ -196,10 +201,10 @@ public static class MockFactory
             .Returns("3");
         mockConfiguration
             .Setup(c => c[$"{mailGroupName}:NextAttemptAvailableAfter"])
-            .Returns("00:00:20");
+            .Returns("00:06:00");
         mockConfiguration
             .Setup(c => c[$"{mailGroupName}:MinIntervalBetweenAttempts"])
-            .Returns("00:00:10");
+            .Returns("00:01:00");
 
         const string googleAuthGroupName = "GoogleAuth";
         mockConfiguration
@@ -214,6 +219,23 @@ public static class MockFactory
         mockConfiguration
             .Setup(c => c[$"{googleAuthGroupName}:Scope"])
             .Returns("<your need scope>");
+        
+        const string rabbitMqGroupName = "RabbitMq";
+        mockConfiguration
+            .Setup(c => c[$"{rabbitMqGroupName}:Host"])
+            .Returns("localhost");
+        mockConfiguration
+            .Setup(c => c[$"{rabbitMqGroupName}:Queue"])
+            .Returns("Queue");
+        mockConfiguration
+            .Setup(c => c[$"{rabbitMqGroupName}:Username"])
+            .Returns("Guest");
+        mockConfiguration
+            .Setup(c => c[$"{rabbitMqGroupName}:Password"])
+            .Returns("12345678901234567890123456789012");
+        mockConfiguration
+            .Setup(c => c[$"{rabbitMqGroupName}:Port"])
+            .Returns("5672");
 
         return mockConfiguration.Object;
     }

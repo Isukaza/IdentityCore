@@ -11,7 +11,7 @@ using IdentityCore.Models.Response;
 namespace IdentityCore.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("/[controller]")]
 public class AuthorizationController : Controller
 {
     #region C-tor and fields

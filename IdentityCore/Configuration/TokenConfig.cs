@@ -1,3 +1,4 @@
+using Helpers;
 using IdentityCore.DAL.PostgreSQL.Models.enums;
 
 namespace IdentityCore.Configuration;
@@ -17,17 +18,15 @@ public static class TokenConfig
 
     public static class Values
     {
-        public static readonly TimeSpan RegistrationConfirmation;
-        public static readonly TimeSpan EmailChangeOld;
-        public static readonly TimeSpan EmailChangeNew;
-        public static readonly TimeSpan PasswordReset;
-        public static readonly TimeSpan PasswordChange;
-        public static readonly TimeSpan UsernameChange;
+        public static TimeSpan RegistrationConfirmation { get; private set; }
+        public static TimeSpan EmailChangeOld { get; private set; }
+        public static TimeSpan EmailChangeNew { get; private set; }
+        public static TimeSpan PasswordReset { get; private set; }
+        public static TimeSpan PasswordChange { get; private set; }
+        public static TimeSpan UsernameChange { get; private set; }
 
-        static Values()
+        public static void Initialize(IConfiguration configuration)
         {
-            var configuration = ConfigBase.GetConfiguration();
-
             RegistrationConfirmation = GetTimeSpan(configuration, Keys.RegistrationConfirmationKey);
             EmailChangeOld = GetTimeSpan(configuration, Keys.EmailChangeOldKey);
             EmailChangeNew = GetTimeSpan(configuration, Keys.EmailChangeNewKey);
@@ -36,14 +35,10 @@ public static class TokenConfig
             UsernameChange = GetTimeSpan(configuration, Keys.UsernameChangeKey);
         }
 
-        private static TimeSpan GetTimeSpan(IConfiguration configuration, string key)
-        {
-            return TimeSpan.TryParse(configuration[key], out var timespan)
-                ? timespan
-                : TimeSpan.FromMinutes(15);
-        }
+        private static TimeSpan GetTimeSpan(IConfiguration configuration, string key) =>
+            DataHelper.GetValidatedTimeSpan(configuration[key], key, 1, 1440);
     }
-    
+
     public static TimeSpan GetTtlForTokenType(TokenType tokenType)
     {
         return tokenType switch

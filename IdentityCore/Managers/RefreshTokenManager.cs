@@ -24,7 +24,7 @@ public class RefreshTokenManager : IRefreshTokenManager
         return new RefreshToken
         {
             RefToken = UserHelper.GetToken(user.Id),
-            Expires = DateTime.UtcNow.Add(RefToken.Configs.Expires),
+            Expires = DateTime.UtcNow.Add(RefTokenConfig.Values.Expires),
             User = user
         };
     }
@@ -35,9 +35,9 @@ public class RefreshTokenManager : IRefreshTokenManager
             return false;
 
         var countTokens = await _refreshTokenDbRepo.GetCountUserTokensAsync(user.Id);
-        if (countTokens >= RefToken.Configs.MaxSessions)
+        if (countTokens >= RefTokenConfig.Values.MaxSessions)
         {
-            var tokensToRemove = countTokens - RefToken.Configs.MaxSessions + 1;
+            var tokensToRemove = countTokens - RefTokenConfig.Values.MaxSessions + 1;
             for (var i = 0; i < tokensToRemove; i++)
             {
                 await _refreshTokenDbRepo.DeleteOldestSessionAsync(user.Id);
@@ -53,7 +53,7 @@ public class RefreshTokenManager : IRefreshTokenManager
             return string.Empty;
 
         token.RefToken = UserHelper.GetToken(token.UserId);
-        token.Expires = DateTime.UtcNow.Add(RefToken.Configs.Expires);
+        token.Expires = DateTime.UtcNow.Add(RefTokenConfig.Values.Expires);
 
         return await _refreshTokenDbRepo.UpdateAsync(token) ? token.RefToken : string.Empty;
     }

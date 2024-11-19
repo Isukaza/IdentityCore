@@ -1,3 +1,5 @@
+using Helpers;
+
 namespace IdentityCore.Configuration;
 
 public static class HostConfig
@@ -12,16 +14,24 @@ public static class HostConfig
 
     public static class Values
     {
-        public static readonly string Host;
-        public static readonly string RegistrationConfirmationPath;
-        public static readonly string ConfirmationTokenPath;
+        public static string Host { get; private set; }
+        public static string RegistrationConfirmationPath { get; private set; }
+        public static string ConfirmationTokenPath { get; private set; }
 
-        static Values()
+
+        public static void Initialize(IConfiguration configuration)
         {
-            var configuration = ConfigBase.GetConfiguration();
-            Host = configuration[Keys.HostKey];
-            RegistrationConfirmationPath = configuration[Keys.RegistrationConfirmationPathKey];
-            ConfirmationTokenPath = configuration[Keys.ConfirmationTokenPathKey];
+            Host = DataHelper.GetRequiredUrl(
+                configuration[Keys.HostKey],
+                Keys.HostKey);
+
+            RegistrationConfirmationPath = DataHelper.GetRequiredPath(
+                configuration[Keys.RegistrationConfirmationPathKey],
+                Keys.RegistrationConfirmationPathKey);
+
+            ConfirmationTokenPath = DataHelper.GetRequiredPath(
+                configuration[Keys.ConfirmationTokenPathKey],
+                Keys.ConfirmationTokenPathKey);
         }
     }
 }
