@@ -21,13 +21,13 @@ public class GoogleManager : IGoogleManager
             },
             Scopes = GoogleConfig.Values.Scope.Split(' ')
         };
-        
+
         var flow = new GoogleAuthorizationCodeFlow(flowInitializer);
-        
+
         var authorizationUrl = flow
             .CreateAuthorizationCodeRequest(GoogleConfig.Values.RedirectUri)
             .Build();
-        
+
         return authorizationUrl.AbsoluteUri;
     }
 
@@ -38,7 +38,16 @@ public class GoogleManager : IGoogleManager
             Audience = new List<string> { GoogleConfig.Values.ClientId }
         };
 
-        var payload = await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
+        GoogleJsonWebSignature.Payload payload;
+        try
+        {
+            payload = await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
+        }
+        catch (InvalidJwtException)
+        {
+            return null;
+        }
+
         return payload;
     }
 
@@ -49,13 +58,21 @@ public class GoogleManager : IGoogleManager
             ClientId = GoogleConfig.Values.ClientId,
             ClientSecret = GoogleConfig.Values.ClientSecret
         };
-        
-        var tokenResponse = await new AuthorizationCodeFlow(
-            new GoogleAuthorizationCodeFlow.Initializer
-            {
-                ClientSecrets = clientSecrets
-            })
-            .ExchangeCodeForTokenAsync(userId: "", code, GoogleConfig.Values.RedirectUri, CancellationToken.None);
+
+        TokenResponse tokenResponse;
+        try
+        {
+            tokenResponse = await new AuthorizationCodeFlow(
+                    new GoogleAuthorizationCodeFlow.Initializer
+                    {
+                        ClientSecrets = clientSecrets
+                    })
+                .ExchangeCodeForTokenAsync(userId: "", code, GoogleConfig.Values.RedirectUri, CancellationToken.None);
+        }
+        catch (TokenResponseException)
+        {
+            return null;
+        }
 
         return tokenResponse;
     }

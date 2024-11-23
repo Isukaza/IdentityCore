@@ -94,6 +94,9 @@ public class AuthorizationController : Controller
     public async Task<IActionResult> GoogleCallback(string code)
     {
         var tokenResponse = await _googleManager.ExchangeCodeForTokenAsync(code);
+        if (tokenResponse == null)
+            return await StatusCodes.Status400BadRequest.ResultState("Invalid code");
+        
         var payload = await _googleManager.VerifyGoogleTokenAsync(tokenResponse.IdToken);
         if (payload == null)
             return await StatusCodes.Status400BadRequest.ResultState("Invalid Google token.");
