@@ -71,6 +71,14 @@ public class AuthorizationController : Controller
         var authorizationUrl = _googleManager.GenerateGoogleLoginUrl();
         return Redirect(authorizationUrl);
     }
+    
+    [AllowAnonymous]
+    [HttpGet("get-google-login-url")]
+    public IActionResult GetGoogleLoginUrl()
+    {
+        var authorizationUrl = _googleManager.GenerateGoogleLoginUrl();
+        return Ok(authorizationUrl);
+    }
 
     /// <summary>
     /// Handles the Google OAuth2 callback and exchanges the authorization code for tokens.
