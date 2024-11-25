@@ -259,7 +259,7 @@ You can access the Swagger documentation at the following URL:
 
 ## Future Enhancements
 
-For information on the project's future plans and enhancements, please refer to the [Roadmap](#).
+For information on the project's future plans and enhancements, please refer to the [Roadmap](https://github.com/Isukaza/IdentityCore/blob/develop/ROADMAP.md).
 
 ---
 
