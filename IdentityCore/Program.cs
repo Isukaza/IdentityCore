@@ -108,14 +108,14 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
     return ConnectionMultiplexer.Connect(redisConnectionUrl);
 });
 
-builder.Services.AddSingleton<IRabbitMqConnection>(
-    new RabbitMqConnection(
-        RabbitMqConfig.Values.Host,
-        RabbitMqConfig.Values.Queue,
-        RabbitMqConfig.Values.Username,
-        RabbitMqConfig.Values.Password,
-        RabbitMqConfig.Values.Port)
-);
+var rabbitMqConnection = await new RabbitMqConnectionBuilder()
+    .WithHost(RabbitMqConfig.Values.Host)
+    .WithQueue(RabbitMqConfig.Values.Queue)
+    .WithCredentials(RabbitMqConfig.Values.Username, RabbitMqConfig.Values.Password)
+    .WithPort(RabbitMqConfig.Values.Port)
+    .BuildAsync();
+
+builder.Services.AddSingleton<IRabbitMqConnection>(rabbitMqConnection);
 
 builder.Services.AddScoped<ICacheRepositoryBase, CacheRepositoryBase>();
 builder.Services.AddScoped<ICfmTokenCacheRepository, CfmTokenCacheRepository>();
