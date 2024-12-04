@@ -1,6 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using Microsoft.IdentityModel.Tokens;
 
 using IdentityCore.Configuration;
 using IdentityCore.DAL.PostgreSQL.Models.db;

@@ -12,8 +12,7 @@ Key features include:
 - Stateless authentication with **JWT** and **Refresh Tokens**.
 - Integration with **PostgreSQL** for persistent storage.
 - **Redis** caching with strict **TTL** policies.
-- Asynchronous email notifications via [**NotificationService**](https://github.com/Isukaza/NotificationService) and *
-  *RabbitMQ**.
+- Asynchronous email notifications via [**NotificationService**](https://github.com/Isukaza/NotificationService) and **RabbitMQ**.
 
 ---
 
